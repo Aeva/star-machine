@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 using SDL_bool = int;
-using size_t = System.UInt64;
+using size_t = nint;
 
 using SDL_GpuTextureUsageFlags = System.UInt32;
 using SDL_GpuBufferUsageFlags = System.UInt32;
@@ -1266,7 +1266,7 @@ namespace SDL3
             SDL_GPU_SWAPCHAINCOMPOSITION_HDR10_ST2048
         }
 
-        public enum SDL_GpuBackendBits
+        public enum SDL_GpuBackendBits : UInt64
         {
             SDL_GPU_BACKEND_INVALID = 0,
             SDL_GPU_BACKEND_VULKAN = 0x0000000000000001,
@@ -1453,8 +1453,8 @@ namespace SDL3
         public unsafe struct SDL_GpuShaderCreateInfo
         {
             public size_t codeSize;
-            public readonly byte* code; // was `const Uint8*`
-            public readonly char* entryPointName; // was `const char*`
+            public /*const*/ byte* code;
+            public /*const*/ char* entryPointName;
             public SDL_GpuShaderFormat format;
             public SDL_GpuShaderStage stage;
             public UInt32 samplerCount;
