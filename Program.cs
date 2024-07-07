@@ -17,7 +17,7 @@ namespace StarMachine
             }
 
             var Window = SDL_CreateWindow("Star Machine"u8, 1024, 1024, 0);
-            if (Window.ToInt64() == 0)
+            if (Window == IntPtr.Zero)
             {
                 Console.WriteLine("SDL3 failed to create a window.");
                 return;
@@ -38,7 +38,6 @@ namespace StarMachine
 
                 Thread.Yield();
             }
-
 
             SDL_DestroyWindow(Window);
         }
