@@ -3077,12 +3077,25 @@ namespace SDL3
          * \sa SDL_GpuSubmit
          * \sa SDL_GpuSubmitAndAcquireFence
          */
-        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe SDL_GpuTexture_Ptr SDL_GpuAcquireSwapchainTexture(
+        [DllImport(nativeLibName, EntryPoint = "SDL_GpuAcquireSwapchainTexture", CallingConvention = CallingConvention.Cdecl)]
+        private static extern unsafe SDL_GpuTexture_Ptr Inner_SDL_GpuAcquireSwapchainTexture(
             SDL_GpuCommandBuffer_Ptr commandBuffer,
             SDL_Window_Ptr window,
             UInt32* pWidth,
             UInt32* pHeight);
+
+        public static (SDL_GpuTexture_Ptr Swapchain, UInt32 Width, UInt32 Height) SDL_GpuAcquireSwapchainTexture(
+            SDL_GpuCommandBuffer_Ptr commandBuffer,
+            SDL_Window_Ptr window)
+        {
+            unsafe
+            {
+                UInt32 Width;
+                UInt32 Height;
+                SDL_GpuTexture_Ptr Swapchain = Inner_SDL_GpuAcquireSwapchainTexture(commandBuffer, window, &Width, &Height);
+                return (Swapchain, Width, Height);
+            }
+        }
 
         /**
          * Submits a command buffer so its commands can be processed on the GPU.

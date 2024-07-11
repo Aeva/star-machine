@@ -19,7 +19,16 @@ namespace StarMachine
             uint StorageBufferCount,
             uint StorageTextureCount)
         {
-            byte[] ShaderBlob = System.IO.File.ReadAllBytes(Path);
+            byte[] ShaderBlob;
+            try
+            {
+                ShaderBlob = System.IO.File.ReadAllBytes(Path);
+            }
+            catch (System.IO.FileNotFoundException)
+            {
+                Console.WriteLine($"File not found: {Path}");
+                return IntPtr.Zero;
+            }
             unsafe
             {
                 fixed (byte* ShaderBlobPtr = ShaderBlob)
@@ -51,7 +60,7 @@ namespace StarMachine
                 return;
             }
 
-            var Window = SDL_CreateWindow("Star Machine"u8, 1024, 1024, 0);
+            var Window = SDL_CreateWindow("Star Machine"u8, 600, 600, 0);
             if (Window == IntPtr.Zero)
             {
                 Console.WriteLine("SDL3 failed to create a window.");
@@ -76,7 +85,7 @@ namespace StarMachine
 
             Console.WriteLine("Ignition successful.");
 
-            IntPtr SimplePipeline;
+            IntPtr SimplePipeline = IntPtr.Zero;
             {
                 var VertexShader = LoadShader(Device, "RawTriangle.vert.spv", SDL_GpuShaderStage.SDL_GPU_SHADERSTAGE_VERTEX, 0, 0, 0, 0);
                 if (VertexShader == IntPtr.Zero)
@@ -151,9 +160,8 @@ namespace StarMachine
                 Console.WriteLine("Raster pipeline created???");
             }
 
-
-
-
+            UInt32 LastWidth = 0;
+            UInt32 LastHeight = 0;
 
             while (true)
             {
@@ -166,7 +174,42 @@ namespace StarMachine
                     }
                 }
 
-                Thread.Yield();
+                IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
+                if (CommandBuffer == IntPtr.Zero)
+                {
+                    Console.WriteLine("GpuAcquireCommandBuffer failed.");
+                    break;
+                }
+
+                (IntPtr BackBuffer, UInt32 Width, UInt32 Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
+                if (BackBuffer != IntPtr.Zero)
+                {
+                    if (Width != LastWidth || Height != LastHeight)
+                    {
+                        LastWidth = Width;
+                        LastHeight = Height;
+                        Console.WriteLine($"Width: {Width}, Height: {Height}");
+                    }
+
+                    SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
+                    ColorAttachmentInfo.textureSlice.texture = BackBuffer;
+                    ColorAttachmentInfo.clearColor.r = 0.2f;
+                    ColorAttachmentInfo.clearColor.g = 0.2f;
+                    ColorAttachmentInfo.clearColor.b = 0.2f;
+                    ColorAttachmentInfo.clearColor.a = 1.0f;
+                    ColorAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_CLEAR;
+                    ColorAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_STORE;
+
+
+                    unsafe
+                    {
+                        IntPtr RenderPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, null);
+                        SDL_GpuBindGraphicsPipeline(RenderPass, SimplePipeline);
+                        SDL_GpuDrawPrimitives(RenderPass, 0, 1);
+                        SDL_GpuEndRenderPass(RenderPass);
+                    }
+                }
+                SDL_GpuSubmit(CommandBuffer);
             }
 
 
