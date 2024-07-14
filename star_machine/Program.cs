@@ -365,9 +365,6 @@ namespace StarMachine
                 new Vector3(1.0f, 1.0f, 0.0f)
             };
 
-            UploadVector3s(Device, SplatWorldPositionBuffer, WorldPositionUpload);
-            UploadVector3s(Device, SplatColorBuffer, ColorUpload);
-
             Span<SDL_GpuBufferBinding> VertexBufferBindings = stackalloc SDL_GpuBufferBinding[3];
             {
                 VertexBufferBindings[0].buffer = SplatVertexBuffer;
@@ -397,6 +394,9 @@ namespace StarMachine
                         break;
                     }
                 }
+
+                UploadVector3s(Device, SplatWorldPositionBuffer, WorldPositionUpload, true);
+                UploadVector3s(Device, SplatColorBuffer, ColorUpload, true);
 
                 IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
                 if (CommandBuffer == IntPtr.Zero)
