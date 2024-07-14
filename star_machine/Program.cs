@@ -163,10 +163,38 @@ namespace StarMachine
                 Console.WriteLine("SDL3 failed to create a window.");
                 return;
             }
-            Console.WriteLine($"Window pixel density: {SDL_GetWindowPixelDensity(Window)}");
-            Console.WriteLine($"Window display scale: {SDL_GetWindowDisplayScale(Window)}");
+            else
+            {
+                float PixelDensity = SDL_GetWindowPixelDensity(Window);
+                float DisplayScale = SDL_GetWindowDisplayScale(Window);
+                Console.WriteLine($"Window pixel density: {PixelDensity}");
+                Console.WriteLine($"Window display scale: {DisplayScale}");
 
-            var Device = SDL_GpuCreateDevice((ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_VULKAN, 1, 0);
+                (int Width, int Height) WindowSize = SDL_GetWindowSize(Window);
+                (int Width, int Height) WindowSizePx = SDL_GetWindowSizeInPixels(Window);
+                Console.WriteLine($"Window size: {WindowSize}");
+                Console.WriteLine($"Window size, pixels: {WindowSizePx}");
+            }
+
+            IntPtr Device = IntPtr.Zero;
+            {
+                const int DebugMode = 1;
+                const int PreferLowPower = 0;
+                var Backends = new ulong[]
+                {
+                    (ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_D3D11,
+                    (ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_METAL,
+                    (ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_VULKAN,
+                };
+                foreach (ulong BackendFlag in Backends)
+                {
+                    Device = SDL_GpuCreateDevice(BackendFlag, DebugMode, PreferLowPower);
+                    if (Device != IntPtr.Zero)
+                    {
+                        break;
+                    }
+                }
+            }
             if (Device == IntPtr.Zero)
             {
                 SDL_DestroyWindow(Window);
@@ -181,8 +209,6 @@ namespace StarMachine
                 Console.WriteLine("SDL3 failed to attach Window to GPU device.");
                 return;
             }
-
-            Console.WriteLine("Ignition successful.");
 
             IntPtr SimplePipeline = IntPtr.Zero;
             {
@@ -310,11 +336,6 @@ namespace StarMachine
                 Console.WriteLine("Failed to create raster pipeline.");
                 return;
             }
-            else
-            {
-                Console.WriteLine("Raster pipeline created???");
-            }
-
 
             var VertexData = new Vector3[]
             {
@@ -384,8 +405,7 @@ namespace StarMachine
                 IndexBufferBinding.offset = 0;
             }
 
-            UInt32 LastWidth = 0;
-            UInt32 LastHeight = 0;
+            Console.WriteLine("Ignition successful.");
 
             while (true)
             {
@@ -411,13 +431,6 @@ namespace StarMachine
                 (IntPtr BackBuffer, UInt32 Width, UInt32 Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
                 if (BackBuffer != IntPtr.Zero)
                 {
-                    if (Width != LastWidth || Height != LastHeight)
-                    {
-                        LastWidth = Width;
-                        LastHeight = Height;
-                        Console.WriteLine($"Width: {Width}, Height: {Height}");
-                    }
-
                     SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
                     {
                         ColorAttachmentInfo.textureSlice.texture = BackBuffer;

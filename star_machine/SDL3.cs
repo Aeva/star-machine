@@ -975,6 +975,81 @@ namespace SDL3
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void SDL_DestroyWindow(SDL_Window_Ptr window);
+
+        /**
+         * Get the size of a window's client area.
+         *
+         * The window pixel size may differ from its window coordinate size if the
+         * window is on a high pixel density display. Use SDL_GetWindowSizeInPixels()
+         * or SDL_GetRenderOutputSize() to get the real client area size in pixels.
+         *
+         * \param window the window to query the width and height from.
+         * \param w a pointer filled in with the width of the window, may be NULL.
+         * \param h a pointer filled in with the height of the window, may be NULL.
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_GetRenderOutputSize
+         * \sa SDL_GetWindowSizeInPixels
+         * \sa SDL_SetWindowSize
+         */
+        [DllImport(nativeLibName, EntryPoint = "SDL_GetWindowSize", CallingConvention = CallingConvention.Cdecl)]
+        private static extern unsafe int Inner_SDL_GetWindowSize(SDL_Window_Ptr window, int* w, int* h);
+        public static (int Width, int Height) SDL_GetWindowSize(SDL_Window_Ptr window)
+        {
+            unsafe
+            {
+                int w = 0;
+                int h = 0;
+                int result = Inner_SDL_GetWindowSize(window, &w, &h);
+                if (result == 0)
+                {
+                    return (w, h);
+                }
+                else
+                {
+                    return (0, 0);
+                }
+            }
+        }
+
+        /**
+         * Get the size of a window's client area, in pixels.
+         *
+         * \param window the window from which the drawable size should be queried.
+         * \param w a pointer to variable for storing the width in pixels, may be
+         *          NULL.
+         * \param h a pointer to variable for storing the height in pixels, may be
+         *          NULL.
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_CreateWindow
+         * \sa SDL_GetWindowSize
+         */
+        [DllImport(nativeLibName, EntryPoint = "SDL_GetWindowSizeInPixels", CallingConvention = CallingConvention.Cdecl)]
+        private static extern unsafe int Inner_SDL_GetWindowSizeInPixels(SDL_Window_Ptr window, int* w, int* h);
+        public static (int Width, int Height) SDL_GetWindowSizeInPixels(SDL_Window_Ptr window)
+        {
+            unsafe
+            {
+                int w = 0;
+                int h = 0;
+                int result = Inner_SDL_GetWindowSizeInPixels(window, &w, &h);
+                if (result == 0)
+                {
+                    return (w, h);
+                }
+                else
+                {
+                    return (0, 0);
+                }
+            }
+        }
         #endregion
 
         #region SDL_gpu.h
