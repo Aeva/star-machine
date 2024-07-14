@@ -831,6 +831,17 @@ namespace SDL3
         public const UInt64 SDL_WINDOW_TRANSPARENT          = 0x0000000040000000;    /**< window with transparent buffer */
         public const UInt64 SDL_WINDOW_NOT_FOCUSABLE        = 0x0000000080000000;   /**< window should not be focusable */
 
+        public struct SDL_DisplayMode
+        {
+            public UInt32 displayID;    /**< the display this mode is associated with */
+            public UInt32 /*SDL_PixelFormatEnum*/ format; /**< pixel format */
+            public Int32 w;                      /**< width */
+            public Int32 h;                      /**< height */
+            public float pixel_density;        /**< scale converting size to pixels (e.g. a 1920x1080 mode with 2.0 scale would have 3840x2160 pixels) */
+            public float refresh_rate;         /**< refresh rate (or zero for unspecified) */
+            public IntPtr driverdata;           /**< driver-specific data, initialize to 0 */
+        }
+
         /**
          * Get the pixel density of a window.
          *
@@ -871,6 +882,21 @@ namespace SDL3
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern float SDL_GetWindowDisplayScale(SDL_Window_Ptr window);
+
+        /**
+         * Query the display mode to use when a window is visible at fullscreen.
+         *
+         * \param window the window to query.
+         * \returns a pointer to the exclusive fullscreen mode to use or NULL for
+         *          borderless fullscreen desktop mode.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_SetWindowFullscreenMode
+         * \sa SDL_SetWindowFullscreen
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern SDL_DisplayMode SDL_GetWindowFullscreenMode(SDL_Window_Ptr window);
 
         /**
          * Create a window with the specified dimensions and flags.

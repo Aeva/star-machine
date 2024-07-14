@@ -156,24 +156,18 @@ namespace StarMachine
                 return;
             }
 
+            bool FullscreenMode = true;
+
             ulong WindowFlags = SDL.SDL_WINDOW_HIGH_PIXEL_DENSITY;
+            if (FullscreenMode)
+            {
+                WindowFlags |= SDL.SDL_WINDOW_FULLSCREEN;
+            }
             var Window = SDL_CreateWindow("Star Machine"u8, 900, 900, WindowFlags);
             if (Window == IntPtr.Zero)
             {
                 Console.WriteLine("SDL3 failed to create a window.");
                 return;
-            }
-            else
-            {
-                float PixelDensity = SDL_GetWindowPixelDensity(Window);
-                float DisplayScale = SDL_GetWindowDisplayScale(Window);
-                Console.WriteLine($"Window pixel density: {PixelDensity}");
-                Console.WriteLine($"Window display scale: {DisplayScale}");
-
-                (int Width, int Height) WindowSize = SDL_GetWindowSize(Window);
-                (int Width, int Height) WindowSizePx = SDL_GetWindowSizeInPixels(Window);
-                Console.WriteLine($"Window size: {WindowSize}");
-                Console.WriteLine($"Window size, pixels: {WindowSizePx}");
             }
 
             IntPtr Device = IntPtr.Zero;
@@ -208,6 +202,49 @@ namespace StarMachine
                 SDL_DestroyWindow(Window);
                 Console.WriteLine("SDL3 failed to attach Window to GPU device.");
                 return;
+            }
+
+            float AspectRatio = 1.0f;
+            {
+                IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
+                if (CommandBuffer == IntPtr.Zero)
+                {
+                    SDL_GpuUnclaimWindow(Device, Window);
+                    SDL_GpuDestroyDevice(Device);
+                    SDL_DestroyWindow(Window);
+                    Console.WriteLine("GpuAcquireCommandBuffer failed.");
+                    return;
+                }
+                (IntPtr BackBuffer, UInt32 Width, UInt32 Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
+                SDL_GpuSubmit(CommandBuffer);
+
+                if (BackBuffer != IntPtr.Zero)
+                {
+                    AspectRatio = (float)Height / (float)Width;
+                    Console.WriteLine($"Backbuffer size: ({Width}, {Height})");
+                    Console.WriteLine($"Aspect ratio: {AspectRatio}");
+                }
+                else
+                {
+                    SDL_GpuUnclaimWindow(Device, Window);
+                    SDL_GpuDestroyDevice(Device);
+                    SDL_DestroyWindow(Window);
+                    Console.WriteLine("SDL_GpuAcquireSwapchainTexture failed.");
+                }
+            }
+
+            {
+                // Note: this can only be queried in fullscreen mode after the backbuffer has been acquired!
+                // Or, at least this is true on Linux w/ Vulkan.
+                float PixelDensity = SDL_GetWindowPixelDensity(Window);
+                float DisplayScale = SDL_GetWindowDisplayScale(Window);
+                Console.WriteLine($"Window pixel density: {PixelDensity}");
+                Console.WriteLine($"Window display scale: {DisplayScale}");
+
+                (int Width, int Height) WindowSize = SDL_GetWindowSize(Window);
+                (int Width, int Height) WindowSizePx = SDL_GetWindowSizeInPixels(Window);
+                Console.WriteLine($"Window size: {WindowSize}");
+                Console.WriteLine($"Window size, pixels: {WindowSizePx}");
             }
 
             IntPtr SimplePipeline = IntPtr.Zero;
@@ -339,8 +376,8 @@ namespace StarMachine
 
             var VertexData = new Vector3[]
             {
-                new Vector3(-1.0f, -1.0f, 0.0f),
-                new Vector3( 1.0f, -1.0f, 0.0f),
+                new Vector3(-1.0f / AspectRatio, -1.0f, 0.0f),
+                new Vector3( 1.0f / AspectRatio, -1.0f, 0.0f),
                 new Vector3( 0.0f,  1.0f, 0.0f)
             };
 
@@ -416,6 +453,11 @@ namespace StarMachine
                     {
                         break;
                     }
+                    else if (Event.type == SDL.SDL_EventType.SDL_EVENT_KEY_DOWN &&
+                        Event.key.scancode == SDL.SDL_Scancode.SDL_SCANCODE_ESCAPE)
+                    {
+                        break;
+                    }
                 }
 
                 UploadVector3s(Device, SplatWorldPositionBuffer, WorldPositionUpload, true);
@@ -431,6 +473,8 @@ namespace StarMachine
                 (IntPtr BackBuffer, UInt32 Width, UInt32 Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
                 if (BackBuffer != IntPtr.Zero)
                 {
+                    AspectRatio = (float)Height / (float)Width;
+
                     SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
                     {
                         ColorAttachmentInfo.textureSlice.texture = BackBuffer;
@@ -449,7 +493,7 @@ namespace StarMachine
                         ViewInfo.ViewToClip = Matrix4x4.Identity;
                         ViewInfo.SplatDiameter = 0.25f;
                         ViewInfo.SplatDepth = 0.25f;
-                        ViewInfo.AspectRatio = 1.0f;
+                        ViewInfo.AspectRatio = AspectRatio;
                     }
 
                     SDL_GpuViewport Viewport;
