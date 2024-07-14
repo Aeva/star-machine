@@ -24,4 +24,8 @@
     </None>
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="*.spirv" />
+  </ItemGroup>
+
 </Project>
