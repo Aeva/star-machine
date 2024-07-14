@@ -806,6 +806,72 @@ namespace SDL3
         #endregion
 
         #region SDL_video
+        public const UInt64 SDL_WINDOW_FULLSCREEN           = 0x0000000000000001;    /**< window is in fullscreen mode */
+        public const UInt64 SDL_WINDOW_OPENGL               = 0x0000000000000002;    /**< window usable with OpenGL context */
+        public const UInt64 SDL_WINDOW_OCCLUDED             = 0x0000000000000004;    /**< window is occluded */
+        public const UInt64 SDL_WINDOW_HIDDEN               = 0x0000000000000008;    /**< window is neither mapped onto the desktop nor shown in the taskbar/dock/window list; SDL_ShowWindow() is required for it to become visible */
+        public const UInt64 SDL_WINDOW_BORDERLESS           = 0x0000000000000010;    /**< no window decoration */
+        public const UInt64 SDL_WINDOW_RESIZABLE            = 0x0000000000000020;    /**< window can be resized */
+        public const UInt64 SDL_WINDOW_MINIMIZED            = 0x0000000000000040;    /**< window is minimized */
+        public const UInt64 SDL_WINDOW_MAXIMIZED            = 0x0000000000000080;    /**< window is maximized */
+        public const UInt64 SDL_WINDOW_MOUSE_GRABBED        = 0x0000000000000100;    /**< window has grabbed mouse input */
+        public const UInt64 SDL_WINDOW_INPUT_FOCUS          = 0x0000000000000200;    /**< window has input focus */
+        public const UInt64 SDL_WINDOW_MOUSE_FOCUS          = 0x0000000000000400;    /**< window has mouse focus */
+        public const UInt64 SDL_WINDOW_EXTERNAL             = 0x0000000000000800;    /**< window not created by SDL */
+        public const UInt64 SDL_WINDOW_MODAL                = 0x0000000000001000;    /**< window is modal */
+        public const UInt64 SDL_WINDOW_HIGH_PIXEL_DENSITY   = 0x0000000000002000;    /**< window uses high pixel density back buffer if possible */
+        public const UInt64 SDL_WINDOW_MOUSE_CAPTURE        = 0x0000000000004000;    /**< window has mouse captured (unrelated to MOUSE_GRABBED) */
+        public const UInt64 SDL_WINDOW_ALWAYS_ON_TOP        = 0x0000000000008000;    /**< window should always be above others */
+        public const UInt64 SDL_WINDOW_UTILITY              = 0x0000000000020000;    /**< window should be treated as a utility window, not showing in the task bar and window list */
+        public const UInt64 SDL_WINDOW_TOOLTIP              = 0x0000000000040000;    /**< window should be treated as a tooltip and does not get mouse or keyboard focus, requires a parent window */
+        public const UInt64 SDL_WINDOW_POPUP_MENU           = 0x0000000000080000;    /**< window should be treated as a popup menu, requires a parent window */
+        public const UInt64 SDL_WINDOW_KEYBOARD_GRABBED     = 0x0000000000100000;    /**< window has grabbed keyboard input */
+        public const UInt64 SDL_WINDOW_VULKAN               = 0x0000000010000000;   /**< window usable for Vulkan surface */
+        public const UInt64 SDL_WINDOW_METAL                = 0x0000000020000000;    /**< window usable for Metal view */
+        public const UInt64 SDL_WINDOW_TRANSPARENT          = 0x0000000040000000;    /**< window with transparent buffer */
+        public const UInt64 SDL_WINDOW_NOT_FOCUSABLE        = 0x0000000080000000;   /**< window should not be focusable */
+
+        /**
+         * Get the pixel density of a window.
+         *
+         * This is a ratio of pixel size to window size. For example, if the window is
+         * 1920x1080 and it has a high density back buffer of 3840x2160 pixels, it
+         * would have a pixel density of 2.0.
+         *
+         * \param window the window to query.
+         * \returns the pixel density or 0.0f on failure; call SDL_GetError() for more
+         *          information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_GetWindowDisplayScale
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern float SDL_GetWindowPixelDensity(SDL_Window_Ptr window);
+
+        /**
+         * Get the content display scale relative to a window's pixel size.
+         *
+         * This is a combination of the window pixel density and the display content
+         * scale, and is the expected scale for displaying content in this window. For
+         * example, if a 3840x2160 window had a display scale of 2.0, the user expects
+         * the content to take twice as many pixels and be the same physical size as
+         * if it were being displayed in a 1920x1080 window with a display scale of
+         * 1.0.
+         *
+         * Conceptually this value corresponds to the scale display setting, and is
+         * updated when that setting is changed, or the window moves to a display with
+         * a different scale setting.
+         *
+         * \param window the window to query.
+         * \returns the display scale, or 0.0f on failure; call SDL_GetError() for
+         *          more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern float SDL_GetWindowDisplayScale(SDL_Window_Ptr window);
+
         /**
          * Create a window with the specified dimensions and flags.
          *

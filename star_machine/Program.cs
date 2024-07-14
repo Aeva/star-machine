@@ -156,12 +156,15 @@ namespace StarMachine
                 return;
             }
 
-            var Window = SDL_CreateWindow("Star Machine"u8, 600, 600, 0);
+            ulong WindowFlags = SDL.SDL_WINDOW_HIGH_PIXEL_DENSITY;
+            var Window = SDL_CreateWindow("Star Machine"u8, 900, 900, WindowFlags);
             if (Window == IntPtr.Zero)
             {
                 Console.WriteLine("SDL3 failed to create a window.");
                 return;
             }
+            Console.WriteLine($"Window pixel density: {SDL_GetWindowPixelDensity(Window)}");
+            Console.WriteLine($"Window display scale: {SDL_GetWindowDisplayScale(Window)}");
 
             var Device = SDL_GpuCreateDevice((ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_VULKAN, 1, 0);
             if (Device == IntPtr.Zero)
@@ -436,6 +439,24 @@ namespace StarMachine
                         ViewInfo.AspectRatio = 1.0f;
                     }
 
+                    SDL_GpuViewport Viewport;
+                    {
+                        Viewport.x = 0;
+                        Viewport.y = 0;
+                        Viewport.w = Width;
+                        Viewport.h = Height;
+                        Viewport.minDepth = 0.1f;
+                        Viewport.maxDepth = 1.0f;
+                    }
+
+                    SDL_GpuRect ScissorRect;
+                    {
+                        ScissorRect.x = 0;
+                        ScissorRect.y = 0;
+                        ScissorRect.w = (int)Width;
+                        ScissorRect.h = (int)Height;
+                    }
+
                     unsafe
                     {
                         SDL_GpuPushVertexUniformData(CommandBuffer, 0, &ViewInfo, (uint)sizeof(ViewInfoUpload));
@@ -443,15 +464,13 @@ namespace StarMachine
                         IntPtr RenderPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, null);
                         {
                             SDL_GpuBindGraphicsPipeline(RenderPass, SimplePipeline);
-
-                            fixed(SDL_GpuBufferBinding* VertexBufferBindingsPtr = VertexBufferBindings)
+                            SDL_GpuSetViewport(RenderPass, &Viewport);
+                            SDL_GpuSetScissor(RenderPass, &ScissorRect);
+                            fixed (SDL_GpuBufferBinding* VertexBufferBindingsPtr = VertexBufferBindings)
                             {
                                 SDL_GpuBindVertexBuffers(RenderPass, 0, VertexBufferBindingsPtr, 3);
                             }
-
                             SDL_GpuBindIndexBuffer(RenderPass, &IndexBufferBinding, SDL_GpuIndexElementSize.SDL_GPU_INDEXELEMENTSIZE_16BIT);
-
-                            //SDL_GpuDrawPrimitives(RenderPass, 0, 1);
                             SDL_GpuDrawIndexedPrimitives(RenderPass, 0, 0, 1, 3);
                         }
                         SDL_GpuEndRenderPass(RenderPass);
@@ -460,7 +479,10 @@ namespace StarMachine
                 SDL_GpuSubmit(CommandBuffer);
             }
 
-
+            SDL_GpuReleaseBuffer(Device, SplatColorBuffer);
+            SDL_GpuReleaseBuffer(Device, SplatWorldPositionBuffer);
+            SDL_GpuReleaseBuffer(Device, SplatIndexBuffer);
+            SDL_GpuReleaseBuffer(Device, SplatVertexBuffer);
             SDL_GpuReleaseGraphicsPipeline(Device, SimplePipeline);
             SDL_GpuUnclaimWindow(Device, Window);
             SDL_GpuDestroyDevice(Device);
