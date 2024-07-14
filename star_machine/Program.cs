@@ -24,6 +24,11 @@ namespace StarMachine
         public float AspectRatio;
     }
 
+    internal class ConstantBuffer
+    {
+
+    }
+
     internal class Program
     {
         private static IntPtr LoadShader(
@@ -230,20 +235,20 @@ namespace StarMachine
                         // "LocalVertexOffset"
                         VertexBindings[0].binding = 0;
                         VertexBindings[0].stride = (uint)sizeof(Vector3);
-                        VertexBindings[0].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_INSTANCE;
-                        VertexBindings[0].stepRate = 1;
+                        VertexBindings[0].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_VERTEX;
+                        VertexBindings[0].stepRate = 0;
 
                         // "SplatWorldPosition"
                         VertexBindings[1].binding = 1;
                         VertexBindings[1].stride = (uint)sizeof(Vector3);
-                        VertexBindings[1].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_VERTEX;
-                        VertexBindings[1].stepRate = 0;
+                        VertexBindings[1].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_INSTANCE;
+                        VertexBindings[1].stepRate = 1;
 
                         // "SplatColor"
                         VertexBindings[2].binding = 2;
                         VertexBindings[2].stride = (uint)sizeof(Vector3);
-                        VertexBindings[2].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_VERTEX;
-                        VertexBindings[2].stepRate = 0;
+                        VertexBindings[2].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_INSTANCE;
+                        VertexBindings[2].stepRate = 1;
                     }
 
                     const int VertexAttributeCount = 3;
@@ -311,8 +316,8 @@ namespace StarMachine
             var VertexData = new Vector3[]
             {
                 new Vector3(-1.0f, -1.0f, 0.0f),
-                new Vector3(-1.0f, -1.0f, 0.0f),
-                new Vector3(-1.0f, -1.0f, 0.0f)
+                new Vector3( 1.0f, -1.0f, 0.0f),
+                new Vector3( 0.0f,  1.0f, 0.0f)
             };
 
             var IndexData = new UInt16[] { 0, 1, 2 };
@@ -348,9 +353,9 @@ namespace StarMachine
 
             var WorldPositionUpload = new Vector3[]
             {
-                new Vector3(0.0f, 0.0f, 0.0f),
-                new Vector3(0.0f, 0.0f, 0.0f),
-                new Vector3(0.0f, 0.0f, 0.0f)
+                new Vector3(-0.25f, -0.25f, 0.0f),
+                new Vector3(0.0f, 0.25f, 0.0f),
+                new Vector3(0.25f, -0.25f, 0.0f)
             };
 
             var ColorUpload = new Vector3[]
@@ -447,7 +452,7 @@ namespace StarMachine
                             SDL_GpuBindIndexBuffer(RenderPass, &IndexBufferBinding, SDL_GpuIndexElementSize.SDL_GPU_INDEXELEMENTSIZE_16BIT);
 
                             //SDL_GpuDrawPrimitives(RenderPass, 0, 1);
-                            SDL_GpuDrawIndexedPrimitives(RenderPass, 0, 0, 1, 1);
+                            SDL_GpuDrawIndexedPrimitives(RenderPass, 0, 0, 1, 3);
                         }
                         SDL_GpuEndRenderPass(RenderPass);
                     }
