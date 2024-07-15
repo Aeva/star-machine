@@ -24,11 +24,6 @@ namespace StarMachine
         public float AspectRatio;
     }
 
-    internal class ConstantBuffer
-    {
-
-    }
-
     internal class Program
     {
         private static IntPtr LoadShader(
