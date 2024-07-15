@@ -1,4 +1,7 @@
 ﻿
+using System.Reflection;
+using static System.Buffer;
+
 using SDL3;
 using static SDL3.SDL;
 
@@ -22,13 +25,51 @@ internal class Program
     const bool ParaboloidSplats = false;
     static readonly int[] SplatRings = {1, 5, 50};
 
+    static void LoadIcon(IntPtr Window)
+    {
+        const string ResourceName = "StarMachine.star_machine.bmp";
+        using (Stream? ResourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(ResourceName))
+        {
+            if (ResourceStream != null)
+            {
+                byte[] ResourceData = new byte[ResourceStream.Length];
+                ResourceStream.Read(ResourceData, 0, (int)ResourceStream.Length);
+
+                unsafe
+                {
+                    fixed(byte* ResourceDataPtr = ResourceData)
+                    {
+                        IntPtr MemoryStream = SDL_IOFromMem(ResourceDataPtr, ResourceData.Length);
+                        IntPtr IconSurface = SDL_LoadBMP_IO(MemoryStream, 1);
+                        if (SDL_SetWindowIcon(Window, IconSurface) < 0)
+                        {
+                            // Seems SDL3 can't set the window icon this way on wayland???
+                            //Console.WriteLine(SDL_GetError());
+                        }
+                        SDL_DestroySurface(IconSurface);
+                    }
+                }
+            }
+        }
+    }
+
     static void Main(string[] args)
     {
+#if true
+        Console.WriteLine("Embedded resources:");
+        string[] ResourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
+        foreach (string ResourceName in ResourceNames)
+        {
+            Console.WriteLine($" - {ResourceName}");
+        }
+#endif
         var SplatMesh = new SplatGenerator(ParaboloidSplats, SplatRings);
         var LowRenderer = new LowLevelRenderer(SplatMesh);
         bool Halt = LowRenderer.Boot(Fullscreen);
         if (!Halt)
         {
+            LoadIcon(LowRenderer.Window);
+
             var HighRenderer = new HighLevelRenderer();
             HighRenderer.Boot();
 

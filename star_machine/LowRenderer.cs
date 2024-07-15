@@ -152,15 +152,6 @@ class LowLevelRenderer
 
     public bool Boot(bool Fullscreen)
     {
-        #if false
-        Console.WriteLine("Embedded resources:");
-        string[] ResourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
-        foreach (string ResourceName in ResourceNames)
-        {
-            Console.WriteLine($" - {ResourceName}");
-        }
-        #endif
-
         if (SDL_Init(SDL_INIT_VIDEO) < 0)
         {
             Console.WriteLine("SDL3 initialization failed.");

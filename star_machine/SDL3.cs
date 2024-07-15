@@ -19,6 +19,8 @@ using SDL_GpuColorComponentFlags = System.UInt32;
 using SDL_GpuBackend = System.UInt64;
 
 using SDL_Window_Ptr = System.IntPtr;
+using SDL_IOStream_Ptr = System.IntPtr;
+using SDL_Surface_Ptr = System.IntPtr;
 using SDL_GpuDevice_Ptr = System.IntPtr;
 using SDL_GpuBuffer_Ptr = System.IntPtr;
 using SDL_GpuTransferBuffer_Ptr = System.IntPtr;
@@ -805,6 +807,160 @@ namespace SDL3
         public static extern int SDL_PollEvent(out SDL_Event _event);
         #endregion
 
+        #region SDL_error
+        /**
+         * Retrieve a message about the last error that occurred on the current
+         * thread.
+         *
+         * It is possible for multiple errors to occur before calling SDL_GetError().
+         * Only the last error is returned.
+         *
+         * The message is only applicable when an SDL function has signaled an error.
+         * You must check the return values of SDL function calls to determine when to
+         * appropriately call SDL_GetError(). You should *not* use the results of
+         * SDL_GetError() to decide if an error has occurred! Sometimes SDL will set
+         * an error string even when reporting success.
+         *
+         * SDL will *not* clear the error string for successful API calls. You *must*
+         * check return values for failure cases before you can assume the error
+         * string applies.
+         *
+         * Error strings are set per-thread, so an error set in a different thread
+         * will not interfere with the current thread's operation.
+         *
+         * The returned string does **NOT** follow the SDL_GetStringRule! The pointer
+         * is valid until the current thread's error string is changed, so the caller
+         * should make a copy if the string is to be used after calling into SDL
+         * again.
+         *
+         * \returns a message with information about the specific error that occurred,
+         *          or an empty string if there hasn't been an error message set since
+         *          the last call to SDL_ClearError().
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_ClearError
+         * \sa SDL_SetError
+         */
+        [DllImport(nativeLibName, EntryPoint="SDL_GetError", CallingConvention = CallingConvention.Cdecl)]
+        private static extern unsafe char* Inner_SDL_GetError();
+
+        public static string SDL_GetError()
+        {
+            unsafe
+            {
+                string? Error = Marshal.PtrToStringAnsi((IntPtr)Inner_SDL_GetError());
+                if (Error != null)
+                {
+                    return Error;
+                }
+            }
+            return "";
+        }
+        #endregion
+
+        #region SDL_iostream
+        /**
+         * Use this function to prepare a read-write memory buffer for use with
+         * SDL_IOStream.
+         *
+         * This function sets up an SDL_IOStream struct based on a memory area of a
+         * certain size, for both read and write access.
+         *
+         * This memory buffer is not copied by the SDL_IOStream; the pointer you
+         * provide must remain valid until you close the stream. Closing the stream
+         * will not free the original buffer.
+         *
+         * If you need to make sure the SDL_IOStream never writes to the memory
+         * buffer, you should use SDL_IOFromConstMem() with a read-only buffer of
+         * memory instead.
+         *
+         * \param mem a pointer to a buffer to feed an SDL_IOStream stream.
+         * \param size the buffer size, in bytes.
+         * \returns a pointer to a new SDL_IOStream structure, or NULL if it fails;
+         *          call SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_IOFromConstMem
+         * \sa SDL_CloseIO
+         * \sa SDL_ReadIO
+         * \sa SDL_SeekIO
+         * \sa SDL_TellIO
+         * \sa SDL_WriteIO
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe SDL_IOStream_Ptr SDL_IOFromMem(void* mem, size_t size);
+        #endregion
+
+        #region SDL_surface
+        /**
+         * Allocate a new RGB surface with a specific pixel format and existing pixel
+         * data.
+         *
+         * No copy is made of the pixel data. Pixel data is not managed automatically;
+         * you must free the surface before you free the pixel data.
+         *
+         * Pitch is the offset in bytes from one row of pixels to the next, e.g.
+         * `width*4` for `SDL_PIXELFORMAT_RGBA8888`.
+         *
+         * You may pass NULL for pixels and 0 for pitch to create a surface that you
+         * will fill in with valid values later.
+         *
+         * \param pixels a pointer to existing pixel data.
+         * \param width the width of the surface.
+         * \param height the height of the surface.
+         * \param pitch the number of bytes between each row, including padding.
+         * \param format the SDL_PixelFormatEnum for the new surface's pixel format.
+         * \returns the new SDL_Surface structure that is created or NULL if it fails;
+         *          call SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_CreateSurface
+         * \sa SDL_DestroySurface
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe SDL_Surface_Ptr SDL_CreateSurfaceFrom(
+            void* pixels, int width, int height, int pitch, UInt32 /*SDL_PixelFormatEnum*/ format);
+
+        /**
+         * Free an RGB surface.
+         *
+         * It is safe to pass NULL to this function.
+         *
+         * \param surface the SDL_Surface to free.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_CreateSurface
+         * \sa SDL_CreateSurfaceFrom
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SDL_DestroySurface(SDL_Surface_Ptr surface);
+
+        /**
+         * Load a BMP image from a seekable SDL data stream.
+         *
+         * The new surface should be freed with SDL_DestroySurface(). Not doing so
+         * will result in a memory leak.
+         *
+         * \param src the data stream for the surface.
+         * \param closeio if SDL_TRUE, calls SDL_CloseIO() on `src` before returning,
+         *                even in the case of an error.
+         * \returns a pointer to a new SDL_Surface structure or NULL if there was an
+         *          error; call SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_DestroySurface
+         * \sa SDL_LoadBMP
+         * \sa SDL_SaveBMP_IO
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern SDL_Surface_Ptr SDL_LoadBMP_IO(SDL_IOStream_Ptr stream, SDL_bool closeio);
+        #endregion
+
         #region SDL_video
         public const UInt64 SDL_WINDOW_FULLSCREEN           = 0x0000000000000001;    /**< window is in fullscreen mode */
         public const UInt64 SDL_WINDOW_OPENGL               = 0x0000000000000002;    /**< window usable with OpenGL context */
@@ -1001,6 +1157,19 @@ namespace SDL3
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void SDL_DestroyWindow(SDL_Window_Ptr window);
+
+        /**
+         * Set the icon for a window.
+         *
+         * \param window the window to change.
+         * \param icon an SDL_Surface structure containing the icon for the window.
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int SDL_SetWindowIcon(SDL_Window_Ptr window, SDL_Surface_Ptr icon);
 
         /**
          * Get the size of a window's client area.
