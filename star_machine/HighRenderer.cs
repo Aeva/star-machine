@@ -12,15 +12,8 @@ using PerfCounter = Perf.PerfCounter;
 
 namespace StarMachine;
 
-using SurfelList = List<(Vector3 Position, Vector3 Normal, Vector3 Color)>;
-using ConcurrentSurfelQueue = ConcurrentQueue<List<(Vector3 Position, Vector3 Normal, Vector3 Color)>>;
-
-
-class SurfelBuffers
-{
-    public int LiveSurfels = 0;
-    public int WriteCursor = 0;
-}
+using SurfelList = List<(Vector3 Position, Vector3 Color)>;
+using ConcurrentSurfelQueue = ConcurrentQueue<List<(Vector3 Position, Vector3 Color)>>;
 
 
 class HighLevelRenderer
@@ -47,6 +40,13 @@ class HighLevelRenderer
     private float CurrentHeading = 0.0f;
     // Units per second
     private Vector3 LinearVelocity = new Vector3(0.0f, 0.0f, 0.0f);//new Vector3(0.0f, 4.0f * 1609.34f * 600.0f, 0.0f);
+
+    // These are ring buffers for splat rendering.
+    public Vector3[] PositionUpload = Array.Empty<Vector3>();
+    public Vector3[] ColorUpload = Array.Empty<Vector3>();
+    public uint LiveSurfels = 0;
+    public uint WriteCursor = 0;
+    public float SplatDiameter = 0.1f;
 
     private PerfCounter FrameRate = new PerfCounter();
     private PerfCounter SplatCopyCount = new PerfCounter();
@@ -128,6 +128,9 @@ class HighLevelRenderer
 
         ClipToView = Matrix4x4.Identity;
         Matrix4x4.Invert(ViewToClip, out ClipToView);
+
+        PositionUpload = new Vector3[Settings.MaxSurfels];
+        ColorUpload = new Vector3[Settings.MaxSurfels];
 
         {
             var parallelOptions = new ParallelOptions();
@@ -316,15 +319,12 @@ class HighLevelRenderer
             {
                 foreach (var Surfel in SurfelBatch)
                 {
-                    (Vector3 Position, Vector3 Normal, Vector3 Color) = Surfel;
+                    (Vector3 Position, Vector3 Color) = Surfel;
 
-#if false // TODO
-                    Positions[WriteCursor] = Position;
-                    Normals[WriteCursor] = Normal;
-                    Colors[WriteCursor] = Color;
-                    WriteCursor = (WriteCursor + 1) % MaxSurfels;
-                    LiveSurfels = Math.Min(LiveSurfels + 1, MaxSurfels);
-#endif
+                    PositionUpload[WriteCursor] = Position;
+                    ColorUpload[WriteCursor] = Color;
+                    WriteCursor = (WriteCursor + 1) % (uint)Settings.MaxSurfels;
+                    LiveSurfels = Math.Min(LiveSurfels + 1, (uint)Settings.MaxSurfels);
                 }
                 Processed += SurfelBatch.Count;
                 ElapsedTicks = DateTime.UtcNow.Ticks - StartTime;
@@ -335,6 +335,8 @@ class HighLevelRenderer
             SplatCopyCount.LogQuantity(Processed);
             SplatCopyTime.LogQuantity(ElapsedCopyTimeMs);
         }
+
+        SplatDiameter = Single.Lerp(FineDiameter, CoarseDiameter, GrainAlpha);
 
         double CadenceMs = FrameRate.Average();
 
@@ -532,13 +534,13 @@ class HighLevelRenderer
                                 SplatColor += LightColor * Luminence;
                             }
                         }
-                        NewSurfels.Add((Position, Normal, SplatColor));
+                        NewSurfels.Add((Position, SplatColor));
                         continue;
                     }
                 }
                 {
                     //NewSurfels.Add((new Vector4(Stop, 1.0f), new Vector4(-RayDir, 1.0f), Color.CornflowerBlue));
-                    NewSurfels.Add((Stop, -RayDir, MissColor));
+                    NewSurfels.Add((Stop, MissColor));
                     continue;
                 }
             }

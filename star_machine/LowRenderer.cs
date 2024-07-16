@@ -33,10 +33,6 @@ class LowLevelRenderer
 
     private SplatGenerator SplatMesh;
 
-    // These will eventually be the ring buffers for drawing
-    public Vector3[] WorldPositionUpload = Array.Empty<Vector3>();
-    public Vector3[] ColorUpload = Array.Empty<Vector3>();
-
     public LowLevelRenderer(SplatGenerator InSplatMesh)
     {
         SplatMesh = InSplatMesh;
@@ -371,47 +367,32 @@ class LowLevelRenderer
             return true;
         }
 
-        WorldPositionUpload = new Vector3[]
         {
-            new Vector3(-0.5f, 0.0f, 0.0f),
-            new Vector3(0.0f, 0.0f, 0.0f),
-            new Vector3(0.5f, 0.0f, 0.0f)
-        };
+            SplatVertexBuffer = SDL_GpuCreateBuffer(
+                Device,
+                (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+                sizeof(float) * 3 * (uint)SplatMesh.Vertices.Length);
 
-        ColorUpload = new Vector3[]
+            SplatIndexBuffer = SDL_GpuCreateBuffer(
+                Device,
+                (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_INDEX_BIT,
+                sizeof(UInt16) * (uint)SplatMesh.Indices.Length);
+
+            UploadVector3s(SplatVertexBuffer, SplatMesh.Vertices);
+            UploadUInt16s(SplatIndexBuffer, SplatMesh.Indices);
+        }
+
         {
-            new Vector3(0.0f, 1.0f, 1.0f),
-            new Vector3(1.0f, 0.0f, 1.0f),
-            new Vector3(1.0f, 1.0f, 0.0f)
-        };
+            SplatWorldPositionBuffer = SDL_GpuCreateBuffer(
+                Device,
+                (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+                sizeof(float) * 3 * (uint)Settings.MaxSurfels);
 
-        SplatVertexBuffer = SDL_GpuCreateBuffer(
-            Device,
-            (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
-            sizeof(float) * 3 * (uint)SplatMesh.Vertices.Length);
-
-        UploadVector3s(SplatVertexBuffer, SplatMesh.Vertices);
-
-
-        SplatIndexBuffer = SDL_GpuCreateBuffer(
-            Device,
-            (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_INDEX_BIT,
-            sizeof(UInt16) * (uint)SplatMesh.Indices.Length);
-
-        UploadUInt16s(SplatIndexBuffer, SplatMesh.Indices);
-
-
-        SplatWorldPositionBuffer = SDL_GpuCreateBuffer(
-            Device,
-            (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
-            sizeof(float) * 3 * (uint)WorldPositionUpload.Length);
-
-
-        SplatColorBuffer = SDL_GpuCreateBuffer(
-            Device,
-            (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
-            sizeof(float) * 3 * (uint)ColorUpload.Length);
-
+            SplatColorBuffer = SDL_GpuCreateBuffer(
+                Device,
+                (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+                sizeof(float) * 3 * (uint)Settings.MaxSurfels);
+        }
 
         Console.WriteLine("Ignition successful.");
         return false;
@@ -448,10 +429,10 @@ class LowLevelRenderer
         }
     }
 
-    public bool Advance(FrameInfo Frame)
+    public bool Advance(FrameInfo Frame, RenderingConfig Settings, HighLevelRenderer HighRenderer)
     {
-        UploadVector3s(SplatWorldPositionBuffer, WorldPositionUpload, true);
-        UploadVector3s(SplatColorBuffer, ColorUpload, true);
+        UploadVector3s(SplatWorldPositionBuffer, HighRenderer.PositionUpload, true);
+        UploadVector3s(SplatColorBuffer, HighRenderer.ColorUpload, true);
 
         IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
         if (CommandBuffer == IntPtr.Zero)
@@ -466,20 +447,24 @@ class LowLevelRenderer
             SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
             {
                 ColorAttachmentInfo.textureSlice.texture = BackBuffer;
-                ColorAttachmentInfo.clearColor.r = 0.2f;
-                ColorAttachmentInfo.clearColor.g = 0.2f;
-                ColorAttachmentInfo.clearColor.b = 0.2f;
+                ColorAttachmentInfo.clearColor.r = 0.0f;
+                ColorAttachmentInfo.clearColor.g = 0.0f;
+                ColorAttachmentInfo.clearColor.b = 0.0f;
                 ColorAttachmentInfo.clearColor.a = 1.0f;
+#if false
                 ColorAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_CLEAR;
+#else
+                ColorAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_DONT_CARE;
+#endif
                 ColorAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_STORE;
             }
 
             ViewInfoUpload ViewInfo;
             {
-                ViewInfo.WorldToView = Matrix4x4.Identity;
-                ViewInfo.ViewToClip = Matrix4x4.Identity;
-                ViewInfo.SplatDiameter = 0.25f;
-                ViewInfo.SplatDepth = 0.25f;
+                ViewInfo.WorldToView = HighRenderer.WorldToView;
+                ViewInfo.ViewToClip = HighRenderer.ViewToClip;
+                ViewInfo.SplatDiameter = HighRenderer.SplatDiameter;
+                ViewInfo.SplatDepth = Settings.SplatDepth;
                 ViewInfo.AspectRatio = Frame.AspectRatio;
             }
 
@@ -526,12 +511,17 @@ class LowLevelRenderer
                     SDL_GpuBindGraphicsPipeline(RenderPass, SimplePipeline);
                     SDL_GpuSetViewport(RenderPass, &Viewport);
                     SDL_GpuSetScissor(RenderPass, &ScissorRect);
-                    fixed (SDL_GpuBufferBinding* VertexBufferBindingsPtr = VertexBufferBindings)
+
+                    if (HighRenderer.LiveSurfels > 0)
                     {
-                        SDL_GpuBindVertexBuffers(RenderPass, 0, VertexBufferBindingsPtr, 3);
+                        fixed (SDL_GpuBufferBinding* VertexBufferBindingsPtr = VertexBufferBindings)
+                        {
+                            SDL_GpuBindVertexBuffers(RenderPass, 0, VertexBufferBindingsPtr, 3);
+                        }
+                        SDL_GpuBindIndexBuffer(
+                            RenderPass, &IndexBufferBinding, SDL_GpuIndexElementSize.SDL_GPU_INDEXELEMENTSIZE_16BIT);
+                        SDL_GpuDrawIndexedPrimitives(RenderPass, 0, 0, SplatMesh.TriangleCount, HighRenderer.LiveSurfels);
                     }
-                    SDL_GpuBindIndexBuffer(RenderPass, &IndexBufferBinding, SDL_GpuIndexElementSize.SDL_GPU_INDEXELEMENTSIZE_16BIT);
-                    SDL_GpuDrawIndexedPrimitives(RenderPass, 0, 0, SplatMesh.TriangleCount, 3);
                 }
                 SDL_GpuEndRenderPass(RenderPass);
             }

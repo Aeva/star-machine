@@ -113,7 +113,7 @@ internal class Program
             LastFrame.RunTimeMs = 0.0;
             (LastFrame.Width, LastFrame.Height) = SDL_GetWindowSizeInPixels(LowRenderer.Window);
             LastFrame.Resize = true;
-            LastFrame.AspectRatio = (float)LastFrame.Height / (float)LastFrame.Width;
+            LastFrame.AspectRatio = (float)LastFrame.Width / (float)LastFrame.Height;
 
             var HighRenderer = new HighLevelRenderer(Settings);
             HighRenderer.Boot(LastFrame);
@@ -145,7 +145,7 @@ internal class Program
                 ThisFrame.AspectRatio = (float)ThisFrame.Height / (float)ThisFrame.Width;
 
                 HighRenderer.Advance(ThisFrame);
-                Halt = LowRenderer.Advance(ThisFrame);
+                Halt = LowRenderer.Advance(ThisFrame, Settings, HighRenderer);
 
                 LastFrame = ThisFrame;
             }
