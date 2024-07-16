@@ -3,7 +3,6 @@
 layout(std140, set = 1, binding = 0)
 uniform ViewInfoBlock
 {
-    mat4 LocalToWorld;
     mat4 WorldToView;
     mat4 ViewToClip;
 

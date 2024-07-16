@@ -12,8 +12,9 @@ public class SplatGenerator
     public UInt16[] Indices;
     public uint TriangleCount;
 
-    public SplatGenerator(bool Paraboloid, int[] Rings)
+    public SplatGenerator(RenderingConfig Settings)
     {
+        int[] Rings = Settings.SplatRings;
         var Offsets = new int[Rings.Length];
         var SplatVertexCount = Rings.Sum();
 
@@ -23,7 +24,7 @@ public class SplatGenerator
             float S = (float)System.Math.Sin(Angle);
             float C = (float)System.Math.Cos(Angle);
             var Vertex = new Vector3(S * Radius, C * Radius, 0.0f);
-            if (Paraboloid)
+            if (Settings.ParaboloidSplats)
             {
                 Vertex.Z = -Vector3.Dot(Vertex, Vertex);
             }

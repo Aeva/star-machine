@@ -18,7 +18,7 @@ public class MoreMath
         return Degrees * (float)RadiansPerDegree;
     }
 
-    public void InfinitePerspective(out Matrix4x4 Result, double FieldOfView, double AspectRatio, double NearPlane = 0.001)
+    public static void InfinitePerspective(out Matrix4x4 Result, double FieldOfView, double AspectRatio, double NearPlane = 0.001)
     {
         // equiv to Math.Tan(Math.PI / 180 * FieldOfView / 2) * NearPlane
         double View = Math.Tan(Math.PI / 360 * FieldOfView) * NearPlane;

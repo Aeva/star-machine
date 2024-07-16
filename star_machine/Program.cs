@@ -8,10 +8,47 @@ using static SDL3.SDL;
 namespace StarMachine;
 
 
+public class RenderingConfig
+{
+    // This determines the maximum number of surfels that will be rendered
+    // every frame, which effectively controls the point density as well as
+    // Convergence time.  If set too high, frame drops can occur.  If set
+    // too low, the image will look chunky.
+    public int MaxSurfels  = 50_000;
+
+    // This is the target number of new surfels to trace every generation.
+    // This tracing is performed asynchronously, but the tracing rate should
+    // roughly match the amount of surfels that can be traced in one vsync
+    // interval to ensure a good screen space distribution and fill rate.
+    // Setting this a bit higher than expected may sometimes produce better
+    // results, however.
+    public int TracingRate = 1_800;
+
+    // View space splat depth.
+    public float SplatDepth = 0.01f;
+
+    // Number of vertices in each vertex ring.
+    public int[] SplatRings = {1, 5, 50};
+
+    // Field of view, degrees.
+    public double FieldOfView = 60;
+
+    // View space near plane distance.
+    public double NearPlane = 0.001;
+
+    // Start in fullscreen mode.
+    public bool Fullscreen = true;
+
+    // Whether to use paraboloids or discs.
+    public bool ParaboloidSplats = false;
+}
+
+
 public struct FrameInfo
 {
     public long Start;
     public double ElapsedMs;
+    public double RunTimeMs;
     public int Width;
     public int Height;
     public bool Resize;
@@ -21,9 +58,7 @@ public struct FrameInfo
 
 internal class Program
 {
-    const bool Fullscreen = true;
-    const bool ParaboloidSplats = false;
-    static readonly int[] SplatRings = {1, 5, 50};
+    static public RenderingConfig Settings = new();
 
     static void LoadIcon(IntPtr Window)
     {
@@ -63,27 +98,31 @@ internal class Program
             Console.WriteLine($" - {ResourceName}");
         }
 #endif
-        var SplatMesh = new SplatGenerator(ParaboloidSplats, SplatRings);
+        var SplatMesh = new SplatGenerator(Settings);
         var LowRenderer = new LowLevelRenderer(SplatMesh);
-        bool Halt = LowRenderer.Boot(Fullscreen);
+        bool Halt = LowRenderer.Boot(Settings);
         if (!Halt)
         {
             LoadIcon(LowRenderer.Window);
-
-            var HighRenderer = new HighLevelRenderer();
-            HighRenderer.Boot();
 
             FrameInfo LastFrame;
             FrameInfo ThisFrame;
 
             LastFrame.Start = DateTime.UtcNow.Ticks;
-            LastFrame.Width = 0;
-            LastFrame.Height = 0;
+            LastFrame.ElapsedMs = 0.0;
+            LastFrame.RunTimeMs = 0.0;
+            (LastFrame.Width, LastFrame.Height) = SDL_GetWindowSizeInPixels(LowRenderer.Window);
+            LastFrame.Resize = true;
+            LastFrame.AspectRatio = (float)LastFrame.Height / (float)LastFrame.Width;
+
+            var HighRenderer = new HighLevelRenderer(Settings);
+            HighRenderer.Boot(LastFrame);
 
             while (!Halt)
             {
                 ThisFrame.Start = DateTime.UtcNow.Ticks;
                 ThisFrame.ElapsedMs = (double)(ThisFrame.Start - LastFrame.Start) / (double)TimeSpan.TicksPerMillisecond;
+                ThisFrame.RunTimeMs = LastFrame.RunTimeMs + ThisFrame.ElapsedMs;
 
                 SDL_Event Event;
                 if (SDL_PollEvent(out Event) != 0)

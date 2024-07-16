@@ -13,7 +13,6 @@ namespace StarMachine;
 
 struct ViewInfoUpload
 {
-    public Matrix4x4 LocalToWorld;
     public Matrix4x4 WorldToView;
     public Matrix4x4 ViewToClip;
     public float SplatDiameter;
@@ -150,7 +149,7 @@ class LowLevelRenderer
         }
     }
 
-    public bool Boot(bool Fullscreen)
+    public bool Boot(RenderingConfig Settings)
     {
         if (SDL_Init(SDL_INIT_VIDEO) < 0)
         {
@@ -159,7 +158,7 @@ class LowLevelRenderer
         }
 
         ulong WindowFlags = SDL.SDL_WINDOW_HIGH_PIXEL_DENSITY;
-        if (Fullscreen)
+        if (Settings.Fullscreen)
         {
             WindowFlags |= SDL.SDL_WINDOW_FULLSCREEN;
         }
@@ -477,7 +476,6 @@ class LowLevelRenderer
 
             ViewInfoUpload ViewInfo;
             {
-                ViewInfo.LocalToWorld = Matrix4x4.Identity;
                 ViewInfo.WorldToView = Matrix4x4.Identity;
                 ViewInfo.ViewToClip = Matrix4x4.Identity;
                 ViewInfo.SplatDiameter = 0.25f;
