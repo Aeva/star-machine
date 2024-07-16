@@ -3,13 +3,13 @@
 layout(std140, set = 1, binding = 0)
 uniform ViewInfoBlock
 {
-	mat4 LocalToWorld;
-	mat4 WorldToView;
-	mat4 ViewToClip;
+    mat4 LocalToWorld;
+    mat4 WorldToView;
+    mat4 ViewToClip;
 
-	float SplatDiameter;
-	float SplatDepth;
-	float AspectRatio;
+    float SplatDiameter;
+    float SplatDepth;
+    float AspectRatio;
 };
 
 layout (location = 0) in vec3 LocalVertexOffset;
