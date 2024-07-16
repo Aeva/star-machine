@@ -38,6 +38,16 @@ class HighLevelRenderer
     private float Tunneling = 0.25f;
     private float GrainAlpha = 1.0f;
 
+    // TODO move character controller stuff out of the renderer
+    // Units per second
+    private float Acceleration = 15.0f;
+    private float TopSpeed = 4.0f * 1609.34f * 600.0f;
+    // Degrees per second
+    private float TurnSpeed = 30.0f;
+    private float CurrentHeading = 0.0f;
+    // Units per second
+    private Vector3 LinearVelocity = new Vector3(0.0f, 0.0f, 0.0f);//new Vector3(0.0f, 4.0f * 1609.34f * 600.0f, 0.0f);
+
     private PerfCounter FrameRate = new PerfCounter();
     private PerfCounter SplatCopyCount = new PerfCounter();
     private PerfCounter SplatCopyTime = new PerfCounter();
@@ -176,11 +186,12 @@ class HighLevelRenderer
             LightPoints[2] = FindLightPosition(-4.0, 2.0 / 3.0);
         }
 
-#if false // TODO
+        // TODO move character controller stuff out of the renderer
         {
             float Seconds = (float)(Frame.ElapsedMs / 1000.0);
 
             float Turn = 0.0f;
+#if false // TODO
             if (Keyboard.GetState().IsKeyDown(Keys.Left))
             {
                 Turn -= TurnSpeed * Seconds;
@@ -189,6 +200,7 @@ class HighLevelRenderer
             {
                 Turn += TurnSpeed * Seconds;
             }
+#endif
             if (Math.Abs(Turn) > 0.001)
             {
                 Turning = Math.Clamp(Turning += Turn, -1.0f, 1.0f);
@@ -204,6 +216,7 @@ class HighLevelRenderer
                 Turning = 0.0f;
             }
 
+#if false // TODO
             if (Keyboard.GetState().IsKeyDown(Keys.Up))
             {
                 LinearVelocity += EyeDir * Acceleration * Seconds;
@@ -220,6 +233,7 @@ class HighLevelRenderer
                     LinearVelocity = (LinearVelocity / Magnitude) * Math.Max(Magnitude - (Acceleration * 0.5f * Seconds), 0.0f);
                 }
             }
+#endif
 
             {
                 float Magnitude = LinearVelocity.Length();
@@ -237,13 +251,13 @@ class HighLevelRenderer
 
                     for (int i = 0; i < 100 && Remainder > 0.01f; ++i)
                     {
-                        (bool Hit, float Travel) = TravelTrace(Eye, Dir, Remainder, 0.125f);
+                        (bool Hit, float Travel) = Model.TravelTrace(Eye, Dir, Remainder, 0.125f);
                         Remainder = Math.Max(0.0f, Remainder - Travel);
                         Eye += Dir * Travel;
 
                         if (Hit)
                         {
-                            Vector3 Normal = Gradient(Eye);
+                            Vector3 Normal = Model.Gradient(Eye);
                             Normal.Z = 0.0f;
                             float LenSquared = Vector3.Dot(Normal, Normal);
                             if (LenSquared > 0.0f)
@@ -284,7 +298,6 @@ class HighLevelRenderer
                 GrainAlpha *= GrainAlpha;
             }
         }
-#endif
 
         WorldToView = Matrix4x4.CreateLookTo(
             Eye,
@@ -298,17 +311,17 @@ class HighLevelRenderer
             long ElapsedTicks = 0;
             int Processed = 0;
 
-            SurfelList SurfelBatch;
+            SurfelList? SurfelBatch;
             while (ElapsedTicks < UpdateTimeSlice && PendingSurfels.TryDequeue(out SurfelBatch))
             {
                 foreach (var Surfel in SurfelBatch)
                 {
-                    (Vector3 Position, Vector3 Normal, Vector3 Color_) = Surfel;
+                    (Vector3 Position, Vector3 Normal, Vector3 Color) = Surfel;
 
 #if false // TODO
                     Positions[WriteCursor] = Position;
                     Normals[WriteCursor] = Normal;
-                    Colors[WriteCursor] = Color_;
+                    Colors[WriteCursor] = Color;
                     WriteCursor = (WriteCursor + 1) % MaxSurfels;
                     LiveSurfels = Math.Min(LiveSurfels + 1, MaxSurfels);
 #endif
