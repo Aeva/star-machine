@@ -26,6 +26,7 @@ class LowLevelRenderer
     public IntPtr Window = IntPtr.Zero;
     private IntPtr Device = IntPtr.Zero;
     private IntPtr SimplePipeline = IntPtr.Zero;
+    private IntPtr DepthTexture = IntPtr.Zero;
     private IntPtr SplatVertexBuffer = IntPtr.Zero;
     private IntPtr SplatIndexBuffer = IntPtr.Zero;
     private IntPtr SplatWorldPositionBuffer = IntPtr.Zero;
@@ -222,6 +223,23 @@ class LowLevelRenderer
                 SDL_GpuDestroyDevice(Device);
                 SDL_DestroyWindow(Window);
                 Console.WriteLine("SDL_GpuAcquireSwapchainTexture failed.");
+                return true;
+            }
+
+            unsafe
+            {
+                SDL_GpuTextureCreateInfo Desc;
+                Desc.width = Width;
+                Desc.height = Height;
+                Desc.depth = 1;
+                Desc.isCube = 0;
+                Desc.layerCount = 1;
+                Desc.levelCount = 1;
+                Desc.sampleCount = SDL.SDL_GpuSampleCount.SDL_GPU_SAMPLECOUNT_1;
+                Desc.format = SDL.SDL_GpuTextureFormat.SDL_GPU_TEXTUREFORMAT_D32_SFLOAT;
+                Desc.usageFlags = (uint)SDL.SDL_GpuTextureUsageFlagBits.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET_BIT;
+
+                DepthTexture = SDL_GpuCreateTexture(Device, &Desc);
             }
         }
 
@@ -284,6 +302,8 @@ class LowLevelRenderer
                 {
                     AttachmentInfo.colorAttachmentCount = ColorDescCount;
                     AttachmentInfo.colorAttachmentDescriptions = ColorDesc;
+                    AttachmentInfo.hasDepthStencilAttachment = 1;
+                    AttachmentInfo.depthStencilFormat = SDL.SDL_GpuTextureFormat.SDL_GPU_TEXTUREFORMAT_D32_SFLOAT;
                 }
 
                 const int VertexBindingCount = 3;
@@ -338,6 +358,14 @@ class LowLevelRenderer
                     VertexInputState.vertexAttributes = VertexAttributes;
                 }
 
+                SDL_GpuDepthStencilState DepthStencilState = new();
+                {
+                    DepthStencilState.depthTestEnable = 1;
+                    DepthStencilState.depthWriteEnable = 1;
+                    DepthStencilState.compareOp = SDL.SDL_GpuCompareOp.SDL_GPU_COMPAREOP_LESS;
+                    DepthStencilState.stencilTestEnable = 0;
+                }
+
                 SDL_GpuGraphicsPipelineCreateInfo PipelineCreateInfo;
                 {
                     PipelineCreateInfo.vertexShader = VertexShader;
@@ -347,6 +375,7 @@ class LowLevelRenderer
                     PipelineCreateInfo.rasterizerState.fillMode = SDL_GpuFillMode.SDL_GPU_FILLMODE_FILL;
                     PipelineCreateInfo.rasterizerState.cullMode = SDL_GpuCullMode.SDL_GPU_CULLMODE_BACK;
                     PipelineCreateInfo.rasterizerState.frontFace = SDL_GpuFrontFace.SDL_GPU_FRONTFACE_CLOCKWISE;
+                    PipelineCreateInfo.depthStencilState = DepthStencilState;
                     PipelineCreateInfo.multisampleState.sampleMask = 0xFFFF;
                     PipelineCreateInfo.attachmentInfo = AttachmentInfo;
                 }
@@ -406,6 +435,14 @@ class LowLevelRenderer
         }
     }
 
+    private void MaybeReleaseTexture(IntPtr Texture)
+    {
+        if (Texture != IntPtr.Zero)
+        {
+            SDL_GpuReleaseTexture(Device, Texture);
+        }
+    }
+
     private void MaybeReleaseReleaseGraphicsPipeline(IntPtr PipelinePtr)
     {
         if (PipelinePtr != IntPtr.Zero)
@@ -422,6 +459,7 @@ class LowLevelRenderer
             MaybeReleaseBuffer(SplatWorldPositionBuffer);
             MaybeReleaseBuffer(SplatIndexBuffer);
             MaybeReleaseBuffer(SplatVertexBuffer);
+            MaybeReleaseTexture(DepthTexture);
             MaybeReleaseReleaseGraphicsPipeline(SimplePipeline);
             SDL_GpuUnclaimWindow(Device, Window);
             SDL_GpuDestroyDevice(Device);
@@ -457,6 +495,18 @@ class LowLevelRenderer
                 ColorAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_DONT_CARE;
 #endif
                 ColorAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_STORE;
+            }
+
+            SDL_GpuDepthStencilAttachmentInfo DepthStencilAttachmentInfo;
+            {
+                DepthStencilAttachmentInfo.textureSlice.texture = DepthTexture;
+                DepthStencilAttachmentInfo.cycle = 1;
+                DepthStencilAttachmentInfo.depthStencilClearValue.depth = 1;
+                DepthStencilAttachmentInfo.depthStencilClearValue.stencil = 0;
+                DepthStencilAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_CLEAR;
+                DepthStencilAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_DONT_CARE;
+                DepthStencilAttachmentInfo.stencilLoadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_DONT_CARE;
+                DepthStencilAttachmentInfo.stencilStoreOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_DONT_CARE;
             }
 
             ViewInfoUpload ViewInfo;
@@ -506,7 +556,7 @@ class LowLevelRenderer
             {
                 SDL_GpuPushVertexUniformData(CommandBuffer, 0, &ViewInfo, (uint)sizeof(ViewInfoUpload));
 
-                IntPtr RenderPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, null);
+                IntPtr RenderPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, &DepthStencilAttachmentInfo);
                 {
                     SDL_GpuBindGraphicsPipeline(RenderPass, SimplePipeline);
                     SDL_GpuSetViewport(RenderPass, &Viewport);
