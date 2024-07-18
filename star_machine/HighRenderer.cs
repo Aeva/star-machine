@@ -18,7 +18,7 @@ using ConcurrentSurfelQueue = ConcurrentQueue<List<(Vector3 Position, Vector3 Co
 
 class HighLevelRenderer
 {
-    private TracingGrist Model;
+    public TracingGrist Model;
 
     private RenderingConfig Settings;
 
@@ -27,19 +27,11 @@ class HighLevelRenderer
     private int FrustaCountY = 0;
     private float FineDiameter = 0.0f;   // Fine grain diameter.
     private float CoarseDiameter = 0.0f; // Coarse grain diameter.
-    private float Turning = 0.0f;
-    private float Tunneling = 0.25f;
-    private float GrainAlpha = 1.0f;
 
-    // TODO move character controller stuff out of the renderer
-    // Units per second
-    private float Acceleration = 15.0f;
-    private float TopSpeed = 4.0f * 1609.34f * 600.0f;
-    // Degrees per second
-    private float TurnSpeed = 30.0f;
-    private float CurrentHeading = 0.0f;
-    // Units per second
-    private Vector3 LinearVelocity = new Vector3(0.0f, 0.0f, 0.0f);//new Vector3(0.0f, 4.0f * 1609.34f * 600.0f, 0.0f);
+    // Maybe these belong on the character controller class instead?
+    public float Turning = 0.0f;
+    public float Tunneling = 0.25f;
+    public float GrainAlpha = 1.0f;
 
     // These are ring buffers for splat rendering.
     public Vector3[] PositionUpload = Array.Empty<Vector3>();
@@ -59,8 +51,8 @@ class HighLevelRenderer
 
     public Vector3[] LightPoints = new Vector3[3];
     public Vector3[] LightColors = new Vector3[3];
-    public  Vector3 Eye = new Vector3(0.0f, -8.0f, 2.0f); // May be offset by constructor.
-    public  Vector3 EyeDir = new Vector3(0.0f, 1.0f, 0.0f);
+    public Vector3 Eye = new Vector3(0.0f, -8.0f, 2.0f); // May be offset by constructor.
+    public Vector3 EyeDir = new Vector3(0.0f, 1.0f, 0.0f);
 
     public Matrix4x4 WorldToView = Matrix4x4.Identity;
     public Matrix4x4 ViewToClip = Matrix4x4.Identity;
@@ -122,7 +114,7 @@ class HighLevelRenderer
 
         WorldToView = Matrix4x4.CreateLookTo(
             Eye,
-            EyeDir,
+            new Vector3(0.0f, 1.0f, 0.0f),
             new Vector3(0, 0, 1));
         InfinitePerspective(out ViewToClip, Settings.FieldOfView, AspectRatio, Settings.NearPlane);
 
@@ -169,7 +161,7 @@ class HighLevelRenderer
          // stuff for tearing down threadpools
     }
 
-    public void Advance(FrameInfo Frame)
+    public void Advance(FrameInfo Frame, CharacterController Game)
     {
         FrameRate.LogFrame();
 
@@ -187,119 +179,6 @@ class HighLevelRenderer
             LightPoints[0] = FindLightPosition(1.0, 0.0 / 3.0);
             LightPoints[1] = FindLightPosition(2.0, 1.0 / 3.0);
             LightPoints[2] = FindLightPosition(-4.0, 2.0 / 3.0);
-        }
-
-        // TODO move character controller stuff out of the renderer
-        {
-            float Seconds = (float)(Frame.ElapsedMs / 1000.0);
-
-            float Turn = 0.0f;
-#if false // TODO
-            if (Keyboard.GetState().IsKeyDown(Keys.Left))
-            {
-                Turn -= TurnSpeed * Seconds;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Right))
-            {
-                Turn += TurnSpeed * Seconds;
-            }
-#endif
-            if (Math.Abs(Turn) > 0.001)
-            {
-                Turning = Math.Clamp(Turning += Turn, -1.0f, 1.0f);
-                CurrentHeading = (CurrentHeading + Turn) % 360.0f;
-                float Radians = (float)(Math.PI / 180.0) * CurrentHeading;
-                EyeDir.X = (float)Math.Sin(Radians);
-                EyeDir.Y = (float)Math.Cos(Radians);
-                EyeDir.Z = 0.0f;
-                EyeDir = Vector3.Normalize(EyeDir);
-            }
-            else
-            {
-                Turning = 0.0f;
-            }
-
-#if false // TODO
-            if (Keyboard.GetState().IsKeyDown(Keys.Up))
-            {
-                LinearVelocity += EyeDir * Acceleration * Seconds;
-            }
-            else
-            {
-                LinearVelocity *= 0.99f;
-            }
-            if (Keyboard.GetState().IsKeyDown(Keys.Down))
-            {
-                float Magnitude = LinearVelocity.Length();
-                if (Magnitude > 0.0f)
-                {
-                    LinearVelocity = (LinearVelocity / Magnitude) * Math.Max(Magnitude - (Acceleration * 0.5f * Seconds), 0.0f);
-                }
-            }
-#endif
-
-            {
-                float Magnitude = LinearVelocity.Length();
-                if (Magnitude > TopSpeed)
-                {
-                    LinearVelocity /= Magnitude;
-                    LinearVelocity *= TopSpeed;
-                    Magnitude = TopSpeed;
-                }
-
-                if (Magnitude > 0.01f)
-                {
-                    float Remainder = Magnitude * Seconds + 0.1f;
-                    Vector3 Dir = Vector3.Normalize(LinearVelocity);
-
-                    for (int i = 0; i < 100 && Remainder > 0.01f; ++i)
-                    {
-                        (bool Hit, float Travel) = Model.TravelTrace(Eye, Dir, Remainder, 0.125f);
-                        Remainder = Math.Max(0.0f, Remainder - Travel);
-                        Eye += Dir * Travel;
-
-                        if (Hit)
-                        {
-                            Vector3 Normal = Model.Gradient(Eye);
-                            Normal.Z = 0.0f;
-                            float LenSquared = Vector3.Dot(Normal, Normal);
-                            if (LenSquared > 0.0f)
-                            {
-                                Normal /= (float)Math.Sqrt(LenSquared);
-                                Dir = Vector3.Reflect(Dir, Normal);
-                                LinearVelocity *= 0.75f;
-                            }
-                            else
-                            {
-                                Dir = -Dir;
-                                LinearVelocity *= 0.5f;
-                            }
-                        }
-                    }
-
-                    Magnitude = LinearVelocity.Length();
-                    LinearVelocity = Dir * Magnitude;
-                }
-
-                if (Magnitude > 0.01f)
-                {
-                    Tunneling += 1.0f * Seconds;
-                }
-                else
-                {
-                    if (Tunneling > 0.001f)
-                    {
-                        Tunneling -= 0.25f * Seconds;
-                    }
-                    else
-                    {
-                        Tunneling = 0.0f;
-                    }
-                }
-                Tunneling = Math.Clamp(Tunneling, 0.0f, 1.0f);
-                GrainAlpha = Tunneling * 0.4f;
-                GrainAlpha *= GrainAlpha;
-            }
         }
 
         WorldToView = Matrix4x4.CreateLookTo(

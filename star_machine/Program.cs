@@ -40,7 +40,7 @@ public class RenderingConfig
     public bool Fullscreen = true;
 
     // Whether to use paraboloids or discs.
-    public bool ParaboloidSplats = false;
+    public bool ParaboloidSplats = true;
 }
 
 
@@ -118,6 +118,8 @@ internal class Program
             var HighRenderer = new HighLevelRenderer(Settings);
             HighRenderer.Boot(LastFrame);
 
+            var Game = new CharacterController(HighRenderer);
+
             while (!Halt)
             {
                 ThisFrame.Start = DateTime.UtcNow.Ticks;
@@ -144,7 +146,8 @@ internal class Program
                 ThisFrame.Resize = LastFrame.Width != ThisFrame.Width || LastFrame.Height != ThisFrame.Height;
                 ThisFrame.AspectRatio = (float)ThisFrame.Height / (float)ThisFrame.Width;
 
-                HighRenderer.Advance(ThisFrame);
+                Game.Advance(ThisFrame);
+                HighRenderer.Advance(ThisFrame, Game);
                 Halt = LowRenderer.Advance(ThisFrame, Settings, HighRenderer);
 
                 LastFrame = ThisFrame;
