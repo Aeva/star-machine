@@ -56,6 +56,16 @@ public struct FrameInfo
 }
 
 
+struct PerformerStatus
+{
+    public bool Left;
+    public bool Right;
+    public bool Up;
+    public bool Down;
+    public bool Paused;
+}
+
+
 internal class Program
 {
     static public RenderingConfig Settings = new();
@@ -120,6 +130,8 @@ internal class Program
 
             var Game = new CharacterController(HighRenderer);
 
+            PerformerStatus PlayerState = new();
+
             while (!Halt)
             {
                 ThisFrame.Start = DateTime.UtcNow.Ticks;
@@ -127,30 +139,77 @@ internal class Program
                 ThisFrame.RunTimeMs = LastFrame.RunTimeMs + ThisFrame.ElapsedMs;
 
                 SDL_Event Event;
-                if (SDL_PollEvent(out Event) != 0)
+                while (SDL_PollEvent(out Event) != 0 && !Halt)
                 {
                     if (Event.type == SDL.SDL_EventType.SDL_EVENT_QUIT)
                     {
                         Halt = true;
                         break;
                     }
-                    else if (Event.type == SDL.SDL_EventType.SDL_EVENT_KEY_DOWN &&
-                        Event.key.scancode == SDL.SDL_Scancode.SDL_SCANCODE_ESCAPE)
+                    else if (Event.type == SDL.SDL_EventType.SDL_EVENT_KEY_DOWN)
                     {
-                        Halt = true;
-                        break;
+                        switch(Event.key.scancode)
+                        {
+                            case SDL.SDL_Scancode.SDL_SCANCODE_ESCAPE:
+                                Halt = true;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_UP:
+                                PlayerState.Up = true;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_DOWN:
+                                PlayerState.Down = true;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_LEFT:
+                                PlayerState.Left = true;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_RIGHT:
+                                PlayerState.Right = true;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_P:
+                                PlayerState.Paused = !PlayerState.Paused;
+                                break;
+                        }
+                    }
+                    else if (Event.type == SDL.SDL_EventType.SDL_EVENT_KEY_UP)
+                    {
+                        switch(Event.key.scancode)
+                        {
+                            case SDL.SDL_Scancode.SDL_SCANCODE_UP:
+                                PlayerState.Up = false;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_DOWN:
+                                PlayerState.Down = false;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_LEFT:
+                                PlayerState.Left = false;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_RIGHT:
+                                PlayerState.Right = false;
+                                break;
+                        }
                     }
                 }
 
-                (ThisFrame.Width, ThisFrame.Height) = SDL_GetWindowSizeInPixels(LowRenderer.Window);
-                ThisFrame.Resize = LastFrame.Width != ThisFrame.Width || LastFrame.Height != ThisFrame.Height;
-                ThisFrame.AspectRatio = (float)ThisFrame.Height / (float)ThisFrame.Width;
+                if (!Halt)
+                {
+                    (ThisFrame.Width, ThisFrame.Height) = SDL_GetWindowSizeInPixels(LowRenderer.Window);
+                    ThisFrame.Resize = LastFrame.Width != ThisFrame.Width || LastFrame.Height != ThisFrame.Height;
+                    ThisFrame.AspectRatio = (float)ThisFrame.Height / (float)ThisFrame.Width;
 
-                Game.Advance(ThisFrame);
-                HighRenderer.Advance(ThisFrame, Game);
-                Halt = LowRenderer.Advance(ThisFrame, Settings, HighRenderer);
+                    Game.Advance(ThisFrame, PlayerState);
+                    HighRenderer.Advance(ThisFrame, PlayerState, Game);
+                    Halt = LowRenderer.Advance(ThisFrame, Settings, HighRenderer);
 
-                LastFrame = ThisFrame;
+                    LastFrame = ThisFrame;
+                }
             }
 
             HighRenderer.Teardown();

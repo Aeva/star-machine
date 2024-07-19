@@ -2,6 +2,9 @@
 
 using Vector3 = System.Numerics.Vector3;
 
+using SDL3;
+using static SDL3.SDL;
+
 namespace StarMachine;
 
 
@@ -23,21 +26,21 @@ class CharacterController
         HighRenderer = InHighRenderer;
     }
 
-    public void Advance(FrameInfo Frame)
+    public void Advance(FrameInfo Frame, PerformerStatus PlayerState)
     {
         float Seconds = (float)(Frame.ElapsedMs / 1000.0);
 
         float Turn = 0.0f;
-        #if false // TODO
-        if (Keyboard.GetState().IsKeyDown(Keys.Left))
+
+        if (PlayerState.Left)
         {
             Turn -= TurnSpeed * Seconds;
         }
-        if (Keyboard.GetState().IsKeyDown(Keys.Right))
+        if (PlayerState.Right)
         {
             Turn += TurnSpeed * Seconds;
         }
-        #endif
+
         if (Math.Abs(Turn) > 0.001)
         {
             HighRenderer.Turning = Math.Clamp(HighRenderer.Turning += Turn, -1.0f, 1.0f);
@@ -53,8 +56,7 @@ class CharacterController
             HighRenderer.Turning = 0.0f;
         }
 
-        #if false // TODO
-        if (Keyboard.GetState().IsKeyDown(Keys.Up))
+        if (PlayerState.Up)
         {
             LinearVelocity += HighRenderer.EyeDir * Acceleration * Seconds;
         }
@@ -62,7 +64,8 @@ class CharacterController
         {
             LinearVelocity *= 0.99f;
         }
-        if (Keyboard.GetState().IsKeyDown(Keys.Down))
+
+        if (PlayerState.Down)
         {
             float Magnitude = LinearVelocity.Length();
             if (Magnitude > 0.0f)
@@ -70,7 +73,6 @@ class CharacterController
                 LinearVelocity = (LinearVelocity / Magnitude) * Math.Max(Magnitude - (Acceleration * 0.5f * Seconds), 0.0f);
             }
         }
-        #endif
 
         {
             float Magnitude = LinearVelocity.Length();

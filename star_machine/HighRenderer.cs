@@ -161,11 +161,11 @@ class HighLevelRenderer
          // stuff for tearing down threadpools
     }
 
-    public void Advance(FrameInfo Frame, CharacterController Game)
+    public void Advance(FrameInfo Frame, PerformerStatus PlayerState, CharacterController Game)
     {
         FrameRate.LogFrame();
 
-        // TODO if (Paused == 0)
+        if (!PlayerState.Paused)
         {
             var FindLightPosition = (double Speed, double Phase) =>
             {
