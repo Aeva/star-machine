@@ -723,6 +723,90 @@ namespace SDL3
         }
 
         /**
+         * Gamepad axis motion event structure (event.gaxis.*)
+         *
+         * \since This struct is available since SDL 3.0.0.
+         */
+        public struct SDL_GamepadAxisEvent
+        {
+            public SDL_EventType type; /**< SDL_EVENT_GAMEPAD_AXIS_MOTION */
+            public UInt32 reserved;
+            public UInt64 timestamp;   /**< In nanoseconds, populated using SDL_GetTicksNS() */
+            public UInt32 /*SDL_JoystickID*/ which; /**< The joystick instance id */
+            public byte axis;         /**< The gamepad axis (SDL_GamepadAxis) */
+            public byte padding1;
+            public byte padding2;
+            public byte padding3;
+            public Int16 value;       /**< The axis value (range: -32768 to 32767) */
+            public UInt16 padding4;
+        }
+
+        /**
+         * Gamepad button event structure (event.gbutton.*)
+         *
+         * \since This struct is available since SDL 3.0.0.
+         */
+        public struct SDL_GamepadButtonEvent
+        {
+            public SDL_EventType type; /**< SDL_EVENT_GAMEPAD_BUTTON_DOWN or SDL_EVENT_GAMEPAD_BUTTON_UP */
+            public UInt32 reserved;
+            public UInt64 timestamp;   /**< In nanoseconds, populated using SDL_GetTicksNS() */
+            public UInt32 /*SDL_JoystickID*/ which; /**< The joystick instance id */
+            public byte button;       /**< The gamepad button (SDL_GamepadButton) */
+            public byte state;        /**< SDL_PRESSED or SDL_RELEASED */
+            public byte padding1;
+            public byte padding2;
+        }
+
+
+        /**
+         * Gamepad device event structure (event.gdevice.*)
+         *
+         * \since This struct is available since SDL 3.0.0.
+         */
+        public struct SDL_GamepadDeviceEvent
+        {
+            public SDL_EventType type; /**< SDL_EVENT_GAMEPAD_ADDED, SDL_EVENT_GAMEPAD_REMOVED, or SDL_EVENT_GAMEPAD_REMAPPED, SDL_EVENT_GAMEPAD_UPDATE_COMPLETE or SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED */
+            public UInt32 reserved;
+            public UInt64 timestamp;   /**< In nanoseconds, populated using SDL_GetTicksNS() */
+            public UInt32 /*SDL_JoystickID*/ which;       /**< The joystick instance id */
+        }
+
+        /**
+         * Gamepad touchpad event structure (event.gtouchpad.*)
+         *
+         * \since This struct is available since SDL 3.0.0.
+         */
+        public struct SDL_GamepadTouchpadEvent
+        {
+            public SDL_EventType type; /**< SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN or SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION or SDL_EVENT_GAMEPAD_TOUCHPAD_UP */
+            public UInt32 reserved;
+            public UInt64 timestamp;   /**< In nanoseconds, populated using SDL_GetTicksNS() */
+            public UInt32 /*SDL_JoystickID*/ which; /**< The joystick instance id */
+            public Int32 touchpad;    /**< The index of the touchpad */
+            public Int32 finger;      /**< The index of the finger on the touchpad */
+            public float x;            /**< Normalized in the range 0...1 with 0 being on the left */
+            public float y;            /**< Normalized in the range 0...1 with 0 being at the top */
+            public float pressure;     /**< Normalized in the range 0...1 */
+        }
+
+        /**
+         * Gamepad sensor event structure (event.gsensor.*)
+         *
+         * \since This struct is available since SDL 3.0.0.
+         */
+        public struct SDL_GamepadSensorEvent
+        {
+            public SDL_EventType type; /**< SDL_EVENT_GAMEPAD_SENSOR_UPDATE */
+            public UInt32 reserved;
+            public UInt64 timestamp;   /**< In nanoseconds, populated using SDL_GetTicksNS() */
+            public UInt32 /*SDL_JoystickID*/ which; /**< The joystick instance id */
+            public Int32 sensor;      /**< The type of the sensor, one of the values of SDL_SensorType */
+            public unsafe fixed float data[3];      /**< Up to 3 values from the sensor, as defined in SDL_sensor.h */
+            public UInt64 sensor_timestamp; /**< The timestamp of the sensor reading in nanoseconds, not necessarily synchronized with the system clock */
+        }
+
+        /**
          * The structure for all events in SDL.
          *
          * \since This struct is available since SDL 3.0.0.
@@ -768,11 +852,22 @@ namespace SDL3
             SDL_JoyHatEvent jhat;                   /**< Joystick hat event data */
             SDL_JoyButtonEvent jbutton;             /**< Joystick button event data */
             SDL_JoyBatteryEvent jbattery;           /**< Joystick battery event data */
-            SDL_GamepadDeviceEvent gdevice;         /**< Gamepad device event data */
-            SDL_GamepadAxisEvent gaxis;             /**< Gamepad axis event data */
-            SDL_GamepadButtonEvent gbutton;         /**< Gamepad button event data */
-            SDL_GamepadTouchpadEvent gtouchpad;     /**< Gamepad touchpad event data */
-            SDL_GamepadSensorEvent gsensor;         /**< Gamepad sensor event data */
+#endif
+            [FieldOffset(0)]
+            public SDL_GamepadDeviceEvent gdevice;         /**< Gamepad device event data */
+
+            [FieldOffset(0)]
+            public SDL_GamepadAxisEvent gaxis;             /**< Gamepad axis event data */
+
+            [FieldOffset(0)]
+            public SDL_GamepadButtonEvent gbutton;         /**< Gamepad button event data */
+
+            [FieldOffset(0)]
+            public SDL_GamepadTouchpadEvent gtouchpad;     /**< Gamepad touchpad event data */
+
+            [FieldOffset(0)]
+            public SDL_GamepadSensorEvent gsensor;         /**< Gamepad sensor event data */
+#if false
             SDL_AudioDeviceEvent adevice;           /**< Audio device event data */
             SDL_CameraDeviceEvent cdevice;          /**< Camera device event data */
             SDL_SensorEvent sensor;                 /**< Sensor event data */

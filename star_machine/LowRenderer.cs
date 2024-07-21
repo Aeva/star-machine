@@ -148,7 +148,7 @@ class LowLevelRenderer
 
     public bool Boot(RenderingConfig Settings)
     {
-        if (SDL_Init(SDL_INIT_VIDEO) < 0)
+        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) < 0)
         {
             Console.WriteLine("SDL3 initialization failed.");
             return true;
