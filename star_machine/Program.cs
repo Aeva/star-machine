@@ -133,6 +133,12 @@ internal class Program
 
             PerformerStatus PlayerState = new();
 
+            foreach (UInt32 Joystick in SDL.SDL_GetJoysticks())
+            {
+                SDL_OpenGamepad(Joystick);
+                break;
+            }
+
             while (!Halt)
             {
                 ThisFrame.Start = DateTime.UtcNow.Ticks;
@@ -198,6 +204,48 @@ internal class Program
                                 break;
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_RIGHT:
+                                PlayerState.Right = false;
+                                break;
+                        }
+                    }
+                    else if (Event.type == SDL.SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_DOWN)
+                    {
+                        switch(Event.gbutton.button)
+                        {
+                            case SDL.SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_UP:
+                                PlayerState.Up = true;
+                                break;
+
+                            case SDL.SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_DOWN:
+                                PlayerState.Down = true;
+                                break;
+
+                            case SDL.SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_LEFT:
+                                PlayerState.Left = true;
+                                break;
+
+                            case SDL.SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
+                                PlayerState.Right = true;
+                                break;
+                        }
+                    }
+                    else if (Event.type == SDL.SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_UP)
+                    {
+                        switch(Event.gbutton.button)
+                        {
+                            case SDL.SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_UP:
+                                PlayerState.Up = false;
+                                break;
+
+                            case SDL.SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_DOWN:
+                                PlayerState.Down = false;
+                                break;
+
+                            case SDL.SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_LEFT:
+                                PlayerState.Left = false;
+                                break;
+
+                            case SDL.SDL_GamepadButton.SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
                                 PlayerState.Right = false;
                                 break;
                         }

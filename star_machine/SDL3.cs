@@ -20,6 +20,7 @@ using SDL_GpuBackend = System.UInt64;
 
 using SDL_Window_Ptr = System.IntPtr;
 using SDL_IOStream_Ptr = System.IntPtr;
+using SDL_Gamepad_Ptr = System.IntPtr;
 using SDL_Surface_Ptr = System.IntPtr;
 using SDL_GpuDevice_Ptr = System.IntPtr;
 using SDL_GpuBuffer_Ptr = System.IntPtr;
@@ -723,6 +724,87 @@ namespace SDL3
         }
 
         /**
+         * The list of buttons available on a gamepad
+         *
+         * For controllers that use a diamond pattern for the face buttons, the
+         * south/east/west/north buttons below correspond to the locations in the
+         * diamond pattern. For Xbox controllers, this would be A/B/X/Y, for Nintendo
+         * Switch controllers, this would be B/A/Y/X, for PlayStation controllers this
+         * would be Cross/Circle/Square/Triangle.
+         *
+         * For controllers that don't use a diamond pattern for the face buttons, the
+         * south/east/west/north buttons indicate the buttons labeled A, B, C, D, or
+         * 1, 2, 3, 4, or for controllers that aren't labeled, they are the primary,
+         * secondary, etc. buttons.
+         *
+         * The activate action is often the south button and the cancel action is
+         * often the east button, but in some regions this is reversed, so your game
+         * should allow remapping actions based on user preferences.
+         *
+         * You can query the labels for the face buttons using
+         * SDL_GetGamepadButtonLabel()
+         *
+         * \since This enum is available since SDL 3.0.0.
+         */
+        public enum SDL_GamepadButton : byte
+        {
+            SDL_GAMEPAD_BUTTON_SOUTH = 0,           /* Bottom face button (e.g. Xbox A button) */
+            SDL_GAMEPAD_BUTTON_EAST,            /* Right face button (e.g. Xbox B button) */
+            SDL_GAMEPAD_BUTTON_WEST,            /* Left face button (e.g. Xbox X button) */
+            SDL_GAMEPAD_BUTTON_NORTH,           /* Top face button (e.g. Xbox Y button) */
+            SDL_GAMEPAD_BUTTON_BACK,
+            SDL_GAMEPAD_BUTTON_GUIDE,
+            SDL_GAMEPAD_BUTTON_START,
+            SDL_GAMEPAD_BUTTON_LEFT_STICK,
+            SDL_GAMEPAD_BUTTON_RIGHT_STICK,
+            SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,
+            SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER,
+            SDL_GAMEPAD_BUTTON_DPAD_UP,
+            SDL_GAMEPAD_BUTTON_DPAD_DOWN,
+            SDL_GAMEPAD_BUTTON_DPAD_LEFT,
+            SDL_GAMEPAD_BUTTON_DPAD_RIGHT,
+            SDL_GAMEPAD_BUTTON_MISC1,           /* Additional button (e.g. Xbox Series X share button, PS5 microphone button, Nintendo Switch Pro capture button, Amazon Luna microphone button, Google Stadia capture button) */
+            SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1,   /* Upper or primary paddle, under your right hand (e.g. Xbox Elite paddle P1) */
+            SDL_GAMEPAD_BUTTON_LEFT_PADDLE1,    /* Upper or primary paddle, under your left hand (e.g. Xbox Elite paddle P3) */
+            SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2,   /* Lower or secondary paddle, under your right hand (e.g. Xbox Elite paddle P2) */
+            SDL_GAMEPAD_BUTTON_LEFT_PADDLE2,    /* Lower or secondary paddle, under your left hand (e.g. Xbox Elite paddle P4) */
+            SDL_GAMEPAD_BUTTON_TOUCHPAD,        /* PS4/PS5 touchpad button */
+            SDL_GAMEPAD_BUTTON_MISC2,           /* Additional button */
+            SDL_GAMEPAD_BUTTON_MISC3,           /* Additional button */
+            SDL_GAMEPAD_BUTTON_MISC4,           /* Additional button */
+            SDL_GAMEPAD_BUTTON_MISC5,           /* Additional button */
+            SDL_GAMEPAD_BUTTON_MISC6,           /* Additional button */
+            SDL_GAMEPAD_BUTTON_MAX,
+            SDL_GAMEPAD_BUTTON_INVALID = 255
+        }
+
+        /**
+         * The list of axes available on a gamepad
+         *
+         * Thumbstick axis values range from SDL_JOYSTICK_AXIS_MIN to
+         * SDL_JOYSTICK_AXIS_MAX, and are centered within ~8000 of zero, though
+         * advanced UI will allow users to set or autodetect the dead zone, which
+         * varies between gamepads.
+         *
+         * Trigger axis values range from 0 (released) to SDL_JOYSTICK_AXIS_MAX (fully
+         * pressed) when reported by SDL_GetGamepadAxis(). Note that this is not the
+         * same range that will be reported by the lower-level SDL_GetJoystickAxis().
+         *
+         * \since This enum is available since SDL 3.0.0.
+         */
+        public enum SDL_GamepadAxis : byte
+        {
+            SDL_GAMEPAD_AXIS_LEFTX = 0,
+            SDL_GAMEPAD_AXIS_LEFTY,
+            SDL_GAMEPAD_AXIS_RIGHTX,
+            SDL_GAMEPAD_AXIS_RIGHTY,
+            SDL_GAMEPAD_AXIS_LEFT_TRIGGER,
+            SDL_GAMEPAD_AXIS_RIGHT_TRIGGER,
+            SDL_GAMEPAD_AXIS_MAX,
+            SDL_GAMEPAD_AXIS_INVALID = 255,
+        }
+
+        /**
          * Gamepad axis motion event structure (event.gaxis.*)
          *
          * \since This struct is available since SDL 3.0.0.
@@ -733,7 +815,7 @@ namespace SDL3
             public UInt32 reserved;
             public UInt64 timestamp;   /**< In nanoseconds, populated using SDL_GetTicksNS() */
             public UInt32 /*SDL_JoystickID*/ which; /**< The joystick instance id */
-            public byte axis;         /**< The gamepad axis (SDL_GamepadAxis) */
+            public SDL_GamepadAxis axis;         /**< The gamepad axis (SDL_GamepadAxis) */
             public byte padding1;
             public byte padding2;
             public byte padding3;
@@ -752,7 +834,7 @@ namespace SDL3
             public UInt32 reserved;
             public UInt64 timestamp;   /**< In nanoseconds, populated using SDL_GetTicksNS() */
             public UInt32 /*SDL_JoystickID*/ which; /**< The joystick instance id */
-            public byte button;       /**< The gamepad button (SDL_GamepadButton) */
+            public SDL_GamepadButton button;       /**< The gamepad button (SDL_GamepadButton) */
             public byte state;        /**< SDL_PRESSED or SDL_RELEASED */
             public byte padding1;
             public byte padding2;
@@ -952,6 +1034,57 @@ namespace SDL3
             }
             return "";
         }
+        #endregion
+
+        #region SDL_joystick
+        /**
+         * Get a list of currently connected joysticks.
+         *
+         * \param count a pointer filled in with the number of joysticks returned.
+         * \returns a 0 terminated array of joystick instance IDs which should be
+         *          freed with SDL_free(), or NULL on error; call SDL_GetError() for
+         *          more details.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_HasJoystick
+         * \sa SDL_OpenJoystick
+         */
+        [DllImport(nativeLibName, EntryPoint="SDL_GetJoysticks", CallingConvention = CallingConvention.Cdecl)]
+        private static extern unsafe UInt32* /*SDL_JoystickID* */ Inner_SDL_GetJoysticks(int *count);
+
+        public static UInt32[] SDL_GetJoysticks()
+        {
+            unsafe
+            {
+                int Count = 0;
+                UInt32* Found = Inner_SDL_GetJoysticks(&Count);
+                var Result = new UInt32[Count];
+                for (int i = 0; i < Count; ++i)
+                {
+                    Result[i] = Found[i];
+                }
+                return Result;
+            }
+
+        }
+        #endregion
+
+        #region SDL_gamepad
+        /**
+         * Open a gamepad for use.
+         *
+         * \param instance_id the joystick instance ID.
+         * \returns a gamepad identifier or NULL if an error occurred; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_CloseGamepad
+         * \sa SDL_IsGamepad
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern SDL_Gamepad_Ptr SDL_OpenGamepad(UInt32 /*SDL_JoystickID*/ instance_id);
         #endregion
 
         #region SDL_iostream
