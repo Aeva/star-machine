@@ -28,6 +28,14 @@ class CharacterController
 
     public void Advance(FrameInfo Frame, PerformerStatus PlayerState)
     {
+        if (PlayerState.Reset)
+        {
+            CurrentHeading = 0.0f;
+            LinearVelocity = new Vector3(0.0f, 0.0f, 0.0f);
+            HighRenderer.Eye = new Vector3(0.0f, -8.0f, 2.0f);
+            HighRenderer.EyeDir = new Vector3(0.0f, 1.0f, 0.0f);
+        }
+
         float Seconds = (float)(Frame.ElapsedMs / 1000.0);
 
         float Turn = 0.0f;

@@ -63,6 +63,7 @@ struct PerformerStatus
     public bool Up;
     public bool Down;
     public bool Paused;
+    public bool Reset;
 }
 
 
@@ -137,6 +138,7 @@ internal class Program
                 ThisFrame.Start = DateTime.UtcNow.Ticks;
                 ThisFrame.ElapsedMs = (double)(ThisFrame.Start - LastFrame.Start) / (double)TimeSpan.TicksPerMillisecond;
                 ThisFrame.RunTimeMs = LastFrame.RunTimeMs + ThisFrame.ElapsedMs;
+                PlayerState.Reset = false;
 
                 SDL_Event Event;
                 while (SDL_PollEvent(out Event) != 0 && !Halt)
@@ -172,6 +174,10 @@ internal class Program
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_P:
                                 PlayerState.Paused = !PlayerState.Paused;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_R:
+                                PlayerState.Reset = true;
                                 break;
                         }
                     }
