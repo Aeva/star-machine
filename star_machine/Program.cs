@@ -63,6 +63,10 @@ struct PerformerStatus
     public bool Down;
     public bool Right;
 
+    public float Turn;
+    public float TurnL;
+    public float TurnR;
+
     public float Clutch;
     public float Brake;
     public float Gas;
@@ -73,6 +77,22 @@ struct PerformerStatus
 
     public bool Paused;
     public bool Reset;
+
+    public void UpdateTurn()
+    {
+        if (TurnL > TurnR)
+        {
+            Turn = TurnL * TurnL * TurnL * -1.0f;
+        }
+        else if (TurnL < TurnR)
+        {
+            Turn = TurnR * TurnR * TurnR;
+        }
+        else
+        {
+            Turn = 0.0f;
+        }
+    }
 }
 
 
@@ -115,11 +135,11 @@ internal class Program
         float Mag = 0.0f;
         if (RawValue >= 0)
         {
-            Sign = -1.0f;
             Mag = (float)RawValue / 32767.0f;
         }
         else
         {
+            Sign = -1.0f;
             Mag = (float)RawValue / -32768.0f;
         }
         if (Mag < Threshold)
@@ -134,7 +154,7 @@ internal class Program
 
     static (float, float) ReadPedalValues(Int16 RawValue)
     {
-        float Value = ReadAxisValue(RawValue);
+        float Value = ReadAxisValue(RawValue) * -1.0f;
         if (Value > 0.0f)
         {
             return (Value, 0.0f);
@@ -316,6 +336,17 @@ internal class Program
                                 (PlayerState.Gas, PlayerState.BrakeR) = ReadPedalValues(Event.gaxis.value);
                                 PlayerState.Brake = Math.Abs(Math.Min(PlayerState.BrakeL, PlayerState.BrakeR));
                                 break;
+
+                            case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFT_TRIGGER:
+                                PlayerState.TurnL = ReadAxisValue(Event.gaxis.value);
+                                PlayerState.UpdateTurn();
+                                break;
+
+                            case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHT_TRIGGER:
+                                PlayerState.TurnR = ReadAxisValue(Event.gaxis.value);
+                                PlayerState.UpdateTurn();
+                                break;
+
                         }
                     }
                 }
@@ -325,15 +356,15 @@ internal class Program
                     ushort EngineVibe = 0;
                     uint Pulse = 0;
 
-                    double TurnFrequency = 100.0;
+                    double TurnFrequency = 150.0;
                     ushort EngineIntensity = 0x100;
                     uint EnginePulse = 1;
 
                     if (PlayerState.Gas > 0.0f)
                     {
-                        EngineIntensity = Math.Max(EngineIntensity, (ushort)(PlayerState.Gas * (float)0x200));
-                        EnginePulse = 10;
-                        TurnFrequency = Double.Lerp(TurnFrequency, 50.0, (double)(PlayerState.Gas * PlayerState.Gas));
+                        EngineIntensity = Math.Max(EngineIntensity, (ushort)(PlayerState.Gas * (float)0x300));
+                        EnginePulse = 1;
+                        TurnFrequency = Double.Lerp(TurnFrequency, 100.0, (double)(PlayerState.Gas * PlayerState.Gas));
                     }
 
                     IdleRumble += ThisFrame.ElapsedMs;

@@ -40,13 +40,21 @@ class CharacterController
 
         float Turn = 0.0f;
 
-        if (PlayerState.Left)
+        if (Math.Abs(PlayerState.Turn) > 0.0f)
         {
-            Turn -= TurnSpeed * Seconds;
+            Turn = TurnSpeed * Seconds * PlayerState.Turn * 2.0f;
+            PlayerState.Turn = 0.0f;
         }
-        if (PlayerState.Right)
+        else
         {
-            Turn += TurnSpeed * Seconds;
+            if (PlayerState.Left)
+            {
+                Turn -= TurnSpeed * Seconds;
+            }
+            if (PlayerState.Right)
+            {
+                Turn += TurnSpeed * Seconds;
+            }
         }
 
         if (Math.Abs(Turn) > 0.001)
