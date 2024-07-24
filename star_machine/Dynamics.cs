@@ -64,21 +64,22 @@ class CharacterController
             HighRenderer.Turning = 0.0f;
         }
 
-        if (PlayerState.Up)
+        if (PlayerState.Gas > 0.0f)
         {
-            LinearVelocity += HighRenderer.EyeDir * Acceleration * Seconds;
+            LinearVelocity += HighRenderer.EyeDir * Acceleration * Seconds * PlayerState.Gas;
         }
         else
         {
             LinearVelocity *= 0.99f;
         }
 
-        if (PlayerState.Down)
+        if (PlayerState.Brake > 0.0f)
         {
             float Magnitude = LinearVelocity.Length();
             if (Magnitude > 0.0f)
             {
-                LinearVelocity = (LinearVelocity / Magnitude) * Math.Max(Magnitude - (Acceleration * 0.5f * Seconds), 0.0f);
+                float NewMagnitude = Math.Max(Magnitude - (Acceleration * 0.5f * Seconds), 0.0f);
+                LinearVelocity = (LinearVelocity / Magnitude) * Single.Lerp(Magnitude, NewMagnitude, PlayerState.Brake);
             }
         }
 

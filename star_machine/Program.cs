@@ -58,10 +58,19 @@ public struct FrameInfo
 
 struct PerformerStatus
 {
-    public bool Left;
-    public bool Right;
     public bool Up;
+    public bool Left;
     public bool Down;
+    public bool Right;
+
+    public float Clutch;
+    public float Brake;
+    public float Gas;
+
+    // Left and right stick contributions to the break.
+    public float BrakeL;
+    public float BrakeR;
+
     public bool Paused;
     public bool Reset;
 }
@@ -99,6 +108,47 @@ internal class Program
         }
     }
 
+    static float ReadAxisValue(Int16 RawValue, float Threshold = 0.2f)
+    {
+        float Scale = 1.0f / (1.0f - Threshold);
+        float Sign = 1.0f;
+        float Mag = 0.0f;
+        if (RawValue >= 0)
+        {
+            Sign = -1.0f;
+            Mag = (float)RawValue / 32767.0f;
+        }
+        else
+        {
+            Mag = (float)RawValue / -32768.0f;
+        }
+        if (Mag < Threshold)
+        {
+            return 0.0f;
+        }
+        else
+        {
+            return (Mag - Threshold) * Scale * Sign;
+        }
+    }
+
+    static (float, float) ReadPedalValues(Int16 RawValue)
+    {
+        float Value = ReadAxisValue(RawValue);
+        if (Value > 0.0f)
+        {
+            return (Value, 0.0f);
+        }
+        else if (Value < 0.0f)
+        {
+            return (0.0f, Value);
+        }
+        else
+        {
+            return (0.0f, 0.0f);
+        }
+    }
+
     static void Main(string[] args)
     {
 #if true
@@ -132,12 +182,15 @@ internal class Program
             var Game = new CharacterController(HighRenderer);
 
             PerformerStatus PlayerState = new();
+            IntPtr GamePad = 0;
 
             foreach (UInt32 Joystick in SDL.SDL_GetJoysticks())
             {
-                SDL_OpenGamepad(Joystick);
+                GamePad = SDL_OpenGamepad(Joystick);
                 break;
             }
+
+            double IdleRumble = 0.0;
 
             while (!Halt)
             {
@@ -249,6 +302,60 @@ internal class Program
                                 PlayerState.Right = false;
                                 break;
                         }
+                    }
+                    if (Event.type == SDL.SDL_EventType.SDL_EVENT_GAMEPAD_AXIS_MOTION)
+                    {
+                        switch(Event.gaxis.axis)
+                        {
+                            case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY:
+                                (PlayerState.Clutch, PlayerState.BrakeL) = ReadPedalValues(Event.gaxis.value);
+                                PlayerState.Brake = Math.Abs(Math.Min(PlayerState.BrakeL, PlayerState.BrakeR));
+                                break;
+
+                            case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHTY:
+                                (PlayerState.Gas, PlayerState.BrakeR) = ReadPedalValues(Event.gaxis.value);
+                                PlayerState.Brake = Math.Abs(Math.Min(PlayerState.BrakeL, PlayerState.BrakeR));
+                                break;
+                        }
+                    }
+                }
+
+                if (GamePad != 0)
+                {
+                    ushort EngineVibe = 0;
+                    uint Pulse = 0;
+
+                    double TurnFrequency = 100.0;
+                    ushort EngineIntensity = 0x100;
+                    uint EnginePulse = 1;
+
+                    if (PlayerState.Gas > 0.0f)
+                    {
+                        EngineIntensity = Math.Max(EngineIntensity, (ushort)(PlayerState.Gas * (float)0x200));
+                        EnginePulse = 10;
+                        TurnFrequency = Double.Lerp(TurnFrequency, 50.0, (double)(PlayerState.Gas * PlayerState.Gas));
+                    }
+
+                    IdleRumble += ThisFrame.ElapsedMs;
+                    if (IdleRumble > TurnFrequency)
+                    {
+                        IdleRumble -= TurnFrequency;
+                        EngineVibe = EngineIntensity;
+                        Pulse = EnginePulse;
+                    }
+
+                    ushort BrakeVibe = 0;
+                    /*
+                    if (PlayerState.Brake > 0.0f)
+                    {
+                        BrakeVibe = (ushort)(PlayerState.Brake * (float)0x1000);
+                        Pulse = 1;
+                    }
+                    */
+
+                    if (Pulse > 0)
+                    {
+                        SDL.SDL_RumbleGamepad(GamePad, EngineVibe, BrakeVibe, Pulse);
                     }
                 }
 

@@ -1085,6 +1085,28 @@ namespace SDL3
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern SDL_Gamepad_Ptr SDL_OpenGamepad(UInt32 /*SDL_JoystickID*/ instance_id);
+
+        /**
+         * Start a rumble effect on a gamepad.
+         *
+         * Each call to this function cancels any previous rumble effect, and calling
+         * it with 0 intensity stops any rumbling.
+         *
+         * This function requires you to process SDL events or call
+         * SDL_UpdateJoysticks() to update rumble state.
+         *
+         * \param gamepad the gamepad to vibrate.
+         * \param low_frequency_rumble the intensity of the low frequency (left)
+         *                             rumble motor, from 0 to 0xFFFF.
+         * \param high_frequency_rumble the intensity of the high frequency (right)
+         *                              rumble motor, from 0 to 0xFFFF.
+         * \param duration_ms the duration of the rumble effect, in milliseconds.
+         * \returns 0, or -1 if rumble isn't supported on this gamepad.
+         *
+         * \since This function is available since SDL 3.0.0.
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int SDL_RumbleGamepad(SDL_Gamepad_Ptr gamepad, UInt16 low_frequency_rumble, UInt16 high_frequency_rumble, UInt32 duration_ms);
         #endregion
 
         #region SDL_iostream
