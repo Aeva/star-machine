@@ -210,7 +210,8 @@ internal class Program
                 break;
             }
 
-            double IdleRumble = 0.0;
+            double IdleRumbleLow = 0.0;
+            double IdleRumbleHigh = 100.0;
 
             while (!Halt)
             {
@@ -353,40 +354,68 @@ internal class Program
 
                 if (GamePad != 0)
                 {
-                    ushort EngineVibe = 0;
+                    ushort LowVibe = 0;
+                    ushort HighVibe = 0;
                     uint Pulse = 0;
 
-                    double TurnFrequency = 150.0;
-                    ushort EngineIntensity = 0x100;
-                    uint EnginePulse = 1;
-
-                    if (PlayerState.Gas > 0.0f)
+#if true
                     {
-                        EngineIntensity = Math.Max(EngineIntensity, (ushort)(PlayerState.Gas * (float)0x300));
-                        EnginePulse = 1;
-                        TurnFrequency = Double.Lerp(TurnFrequency, 100.0, (double)(PlayerState.Gas * PlayerState.Gas));
-                    }
+                        double TurnFrequencyLow = 100.0;
+                        double TurnFrequencyHigh = 75.0;
 
-                    IdleRumble += ThisFrame.ElapsedMs;
-                    if (IdleRumble > TurnFrequency)
-                    {
-                        IdleRumble -= TurnFrequency;
-                        EngineVibe = EngineIntensity;
-                        Pulse = EnginePulse;
-                    }
+                        IdleRumbleLow += ThisFrame.ElapsedMs;
+                        if (IdleRumbleLow > TurnFrequencyLow)
+                        {
+                            IdleRumbleLow -= TurnFrequencyLow;
+                            LowVibe = 0xFFFF;
+                            Pulse = 1;
+                        }
 
-                    ushort BrakeVibe = 0;
-                    /*
-                    if (PlayerState.Brake > 0.0f)
-                    {
-                        BrakeVibe = (ushort)(PlayerState.Brake * (float)0x1000);
-                        Pulse = 1;
+                        IdleRumbleHigh += ThisFrame.ElapsedMs;
+                        if (IdleRumbleHigh > TurnFrequencyHigh)
+                        {
+                            IdleRumbleHigh -= TurnFrequencyHigh;
+                            if (PlayerState.Gas > 0.0f)
+                            {
+                                LowVibe = 0x100;
+                                HighVibe = 0x100;
+                                Pulse = 1;
+                            }
+                        }
+
+                        // IdleRumbleHigh += ThisFrame.ElapsedMs;
+                        // if (IdleRumbleHigh > TurnFrequency * 0.5)
+                        // {
+                        //     IdleRumbleHigh   -= TurnFrequency * 0.5;
+                        //     HighVibe = (ushort)((PlayerState.Gas == 0.0f) ? 0x500 : 0x600);
+                        //     Pulse = 1;
+                        // }
                     }
-                    */
+#else
+                    {
+                        double TurnFrequency = Double.Lerp(200.0, 150.0, PlayerState.Gas);
+
+                        IdleRumbleLow += ThisFrame.ElapsedMs;
+                        if (IdleRumbleLow > TurnFrequency)
+                        {
+                            IdleRumbleLow -= TurnFrequency;
+                            LowVibe = (ushort)((PlayerState.Gas == 0.0f) ? 0x100 : 0x150);
+                            Pulse = 1;
+                        }
+
+                        IdleRumbleHigh += ThisFrame.ElapsedMs;
+                        if (IdleRumbleHigh > TurnFrequency * 0.5)
+                        {
+                            IdleRumbleHigh   -= TurnFrequency * 0.5;
+                            HighVibe = (ushort)((PlayerState.Gas == 0.0f) ? 0x500 : 0x600);
+                            Pulse = 4;
+                        }
+                    }
+#endif
 
                     if (Pulse > 0)
                     {
-                        SDL.SDL_RumbleGamepad(GamePad, EngineVibe, BrakeVibe, Pulse);
+                        SDL.SDL_RumbleGamepad(GamePad, LowVibe, HighVibe, Pulse);
                     }
                 }
 
