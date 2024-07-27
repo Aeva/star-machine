@@ -132,7 +132,7 @@ class HighLevelRenderer
             Task.Run(() => {
                 while(!parallelOptions.CancellationToken.IsCancellationRequested)
                 {
-                    if (PendingSurfels.Count == 0)
+                    if (PendingSurfels.Count < Settings.MaxSurfels)
                     {
                         try
                         {
@@ -143,10 +143,7 @@ class HighLevelRenderer
                             return;
                         }
                     }
-                    else
-                    {
-                        Thread.Yield();
-                    }
+                    Thread.Yield();
                 }
             }, CancelSource.Token);
         }
@@ -281,8 +278,7 @@ class HighLevelRenderer
             return (Numerator + Denominator - 1) / Denominator;
         };
 
-        int CurrentTracingRate = Settings.TracingRate;
-        var TracingPartitioner = Partitioner.Create(0, CurrentTracingRate);
+        var TracingPartitioner = Partitioner.Create(0, Settings.TracingRate);
 
         Vector3 MissColor = new Vector3(0.2f, 0.2f, 0.2f);
 
