@@ -132,7 +132,7 @@ class HighLevelRenderer
             Task.Run(() => {
                 while(!parallelOptions.CancellationToken.IsCancellationRequested)
                 {
-                    if (PendingSurfels.Count < Settings.MaxSurfels)
+                    if (PendingSurfels.Count < Settings.TracingRate)
                     {
                         try
                         {
