@@ -282,34 +282,22 @@ class HighLevelRenderer
         };
 
         int CurrentTracingRate = Settings.TracingRate;
-
-        int SliceSize = CurrentTracingRate;
-        int SliceCount = 1;
-
-        if (CurrentTracingRate > parallelOptions.MaxDegreeOfParallelism)
-        {
-            int MaximumBatchSize = 16;
-            SliceSize = Math.Min(CeilDivide(CurrentTracingRate, parallelOptions.MaxDegreeOfParallelism), MaximumBatchSize);
-            SliceCount = CeilDivide(CurrentTracingRate, SliceSize);
-            SliceSize = CeilDivide(CurrentTracingRate, SliceCount);
-        }
+        var TracingPartitioner = Partitioner.Create(0, CurrentTracingRate);
 
         Vector3 MissColor = new Vector3(0.2f, 0.2f, 0.2f);
 
-        Parallel.For(0, SliceCount, parallelOptions, (SliceIndex) =>
+        Parallel.ForEach(TracingPartitioner, (SliceParams, LoopState) =>
         {
-            int SliceStart = SliceIndex * SliceSize;
-            int SliceStop = Math.Min(CurrentTracingRate, SliceStart + SliceSize);
+            int SliceStart = SliceParams.Item1;
+            int SliceStop = SliceParams.Item2;
             int Range = SliceStop - SliceStart;
 
             var NewSurfels = new SurfelList(Range);
 
             var SplatRNG = new Random();
 
-            for (int BatchIndex = 0; BatchIndex < Range; ++BatchIndex)
+            for (int Cursor = SliceStart; Cursor < SliceStop; ++Cursor)
             {
-                int Cursor = SliceStart + BatchIndex;
-
                 Vector3 RayDir;
                 {
                     #if true
