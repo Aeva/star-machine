@@ -336,7 +336,6 @@ public readonly struct ProgramBuffer
                     float Radius = ReadValue(ref ProgramCounter);
                     float Dist = Point.Length() - Radius;
                     Stack[StackPointer++] = Dist;
-                    Point = EvalPoint;
                     break;
                 }
 
@@ -347,7 +346,6 @@ public readonly struct ProgramBuffer
                     Vector3 A = Vector3.Abs(Point) - Extent;
                     float Dist = Vector3.Max(A, Vector3.Zero).Length() + Math.Min(Math.Max(Math.Max(A.X, A.Y), A.Z), 0.0f);
                     Stack[StackPointer++] = Dist;
-                    Point = EvalPoint;
                     break;
                 }
 
@@ -363,7 +361,6 @@ public readonly struct ProgramBuffer
                     D.Y = Math.Abs(Point.Z) - Extent;
                     float Dist = Math.Min(Math.Max(D.X, D.Y), 0.0f) + Vector2.Max(D, Vector2.Zero).Length();
                     Stack[StackPointer++] = Dist;
-                    Point = EvalPoint;
                     break;
                 }
 
@@ -373,7 +370,6 @@ public readonly struct ProgramBuffer
                     Vector3 Normal = ReadVec3(ref ProgramCounter);
                     float Dist = Vector3.Dot(Point, Normal);
                     Stack[StackPointer++] = Dist;
-                    Point = EvalPoint;
                     break;
                 }
 
