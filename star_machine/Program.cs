@@ -5,7 +5,7 @@ using static System.Buffer;
 using SDL3;
 using static SDL3.SDL;
 
-using Fixie = FixedPoint.Fixie;
+using FixedPointTests = FixedPoint.FixedPointTests;
 
 
 namespace StarMachine;
@@ -176,7 +176,7 @@ internal class Program
     {
 #if true
         {
-            Fixie.PreflightCheck();
+            FixedPointTests.PreflightCheck();
         }
 #endif
 
