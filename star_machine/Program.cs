@@ -5,6 +5,9 @@ using static System.Buffer;
 using SDL3;
 using static SDL3.SDL;
 
+using Fixie = FixedPoint.Fixie;
+
+
 namespace StarMachine;
 
 
@@ -171,6 +174,12 @@ internal class Program
 
     static void Main(string[] args)
     {
+#if true
+        {
+            Fixie.PreflightCheck();
+        }
+#endif
+
 #if true
         Console.WriteLine("Embedded resources:");
         string[] ResourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
