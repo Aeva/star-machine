@@ -225,6 +225,8 @@ internal class Program
             double IdleRumbleLow = 0.0;
             double IdleRumbleHigh = 100.0;
 
+            SDL.SDL_HideCursor();
+
             while (!Halt)
             {
                 ThisFrame.Start = DateTime.UtcNow.Ticks;

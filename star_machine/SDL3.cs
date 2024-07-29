@@ -1109,6 +1109,36 @@ namespace SDL3
         public static extern int SDL_RumbleGamepad(SDL_Gamepad_Ptr gamepad, UInt16 low_frequency_rumble, UInt16 high_frequency_rumble, UInt32 duration_ms);
         #endregion
 
+        #region SDL_mouse
+        /**
+         * Show the cursor.
+         *
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_CursorVisible
+         * \sa SDL_HideCursor
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int SDL_ShowCursor();
+
+        /**
+         * Hide the cursor.
+         *
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_CursorVisible
+         * \sa SDL_ShowCursor
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int SDL_HideCursor();
+        #endregion
+
         #region SDL_iostream
         /**
          * Use this function to prepare a read-write memory buffer for use with
