@@ -14,7 +14,9 @@ using static SDL3.SDL;
 using FixedInt = FixedPoint.FixedInt;
 using Fixie = FixedPoint.Fixie;
 
+
 namespace StarMachine;
+
 
 [System.Runtime.CompilerServices.InlineArray(3)]
 public struct ivec3
@@ -587,20 +589,16 @@ class LowLevelRenderer
 
             ViewInfoUpload ViewInfo;
             {
-                Fixie FixedPointEye = new(HighRenderer.Eye);
-
                 ViewInfo.WorldToView = HighRenderer.WorldToView;
-                ViewInfo.WorldToView[3, 0] = 0.0f;
-                ViewInfo.WorldToView[3, 1] = 0.0f;
-                ViewInfo.WorldToView[3, 2] = 0.0f;
-
                 ViewInfo.ViewToClip = HighRenderer.ViewToClip;
 
                 ViewInfo.EyeInnerWorldPosition = new();
                 ViewInfo.EyeOuterWorldPosition = new();
                 for (int Lane = 0; Lane < 3; ++Lane)
                 {
-                    (ViewInfo.EyeInnerWorldPosition[Lane], ViewInfo.EyeOuterWorldPosition[Lane]) = FixedPointEye.Lanes[Lane].Split();
+                    (UInt32 Inner, UInt32 Outer) = HighRenderer.Eye.Lanes[Lane].Split();
+                    ViewInfo.EyeInnerWorldPosition[Lane] = Inner;
+                    ViewInfo.EyeOuterWorldPosition[Lane] = Outer;
                 }
 
                 ViewInfo.SplatDiameter = HighRenderer.SplatDiameter;

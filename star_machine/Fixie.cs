@@ -17,9 +17,11 @@ public record struct FixedInt
 
     public const int UnitOffset = 16;
 
-    public const long UnitValue = 1 << UnitOffset;
+    public const Int64 UnitValue = 1 << UnitOffset;
 
-    public const long DecimalMask = UnitValue - 1;
+    public const Int64 DecimalMask = UnitValue - 1;
+
+    public const Int64 HalfValue = 1 << (UnitOffset - 1);
 
     public override string ToString()
     {
@@ -33,7 +35,7 @@ public record struct FixedInt
 
     public FixedInt(int InValue)
     {
-        Value = (long)(InValue) << UnitOffset;
+        Value = (Int64)(InValue) << UnitOffset;
     }
 
     public FixedInt(long InValue)
@@ -109,6 +111,22 @@ public record struct FixedInt
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static FixedInt Round(FixedInt X)
+    {
+        // Meant to be behaviorally similar to https://learn.microsoft.com/en-us/dotnet/api/system.single.round
+        Int64 Sign = X.Value < 0 ? -1 : 1;
+        Int64 AbsValue = Math.Abs(X.Value);
+        Int64 Fract = AbsValue & DecimalMask;
+        Int64 Whole = AbsValue >> UnitOffset;
+        if (Fract > HalfValue || (Fract == HalfValue && Whole % 2 == 1))
+        {
+            ++Whole;
+        }
+        X.Value = (Whole * Sign) << UnitOffset;
+        return X;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static FixedInt Min(FixedInt LHS, FixedInt RHS)
     {
         LHS.Value = Math.Min(LHS.Value, RHS.Value);
@@ -177,6 +195,14 @@ public record struct FixedInt
         // This can underflow.
         Result.Value = (LHS.Value << UnitOffset) / RHS.Value;
 #endif
+        return Result;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static FixedInt operator %(FixedInt LHS, FixedInt RHS)
+    {
+        FixedInt Result = new();
+        Result.Value = LHS.Value % RHS.Value;
         return Result;
     }
 
@@ -409,6 +435,17 @@ public record struct Fixie
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Fixie Round(Fixie X)
+    {
+        Fixie Result = new();
+        for (int Lane = 0; Lane < Count; ++Lane)
+        {
+            Result.Lanes[Lane] = FixedInt.Round(X.Lanes[Lane]);
+        }
+        return Result;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Fixie Transform(Fixie FixedPointVector, Quaternion RotateBy)
     {
         // TODO Implement quaternion rotation directly.
@@ -471,6 +508,17 @@ public record struct Fixie
         return Result;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Fixie operator %(Fixie LHS, Fixie RHS)
+    {
+        Fixie Result = new();
+        for (int Lane = 0; Lane < Count; ++Lane)
+        {
+            Result.Lanes[Lane] = LHS.Lanes[Lane] % RHS.Lanes[Lane];
+        }
+        return Result;
+    }
+
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static Fixie operator +(Fixie LHS, FixedInt RHS)
@@ -498,6 +546,13 @@ public record struct Fixie
     {
         Fixie Substitute = new(RHS);
         return LHS / Substitute;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Fixie operator %(Fixie LHS, FixedInt RHS)
+    {
+        Fixie Substitute = new(RHS);
+        return LHS % Substitute;
     }
 
 
@@ -591,6 +646,37 @@ public struct FixedPointTests
             FixedInt A = new(1.0f);
             FixedInt B = -A / -2.0f;
             Trace.Assert(B.ToSingle() == 0.5f);
+        }
+
+        // Does rounding work?
+        {
+            var TestRound = (double Input, int Expected) =>
+            {
+                FixedInt A = new(Input);
+                FixedInt B = new(Expected);
+                FixedInt C = FixedInt.Round(A);
+                Trace.Assert(C == B, $"Unexpected: FixedInt.Round({A}) returned {C}, expected {B}!");
+            };
+
+            TestRound(0.25, 0);
+            TestRound(0.5, 0);
+            TestRound(0.51, 1);
+            TestRound(1.49, 1);
+            TestRound(1.5, 2);
+            TestRound(1.9, 2);
+            TestRound(3.0, 3);
+            TestRound(7.5, 8);
+            TestRound(8.5, 8);
+
+            TestRound(-0.25, 0);
+            TestRound(-0.5, 0);
+            TestRound(-0.51, -1);
+            TestRound(-1.49, -1);
+            TestRound(-1.5, -2);
+            TestRound(-1.9, -2);
+            TestRound(-3.0, -3);
+            TestRound(-7.5, -8);
+            TestRound(-8.5, -8);
         }
 
         // Does Normalize work?

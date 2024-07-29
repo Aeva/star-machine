@@ -9,6 +9,9 @@ using static StarMachine.MoreMath;
 using static Evaluator.ProgramBuffer;
 using PerfCounter = Perf.PerfCounter;
 
+using FixedInt = FixedPoint.FixedInt;
+using Fixie = FixedPoint.Fixie;
+
 
 namespace StarMachine;
 
@@ -51,7 +54,7 @@ class HighLevelRenderer
 
     public Vector3[] LightPoints = new Vector3[3];
     public Vector3[] LightColors = new Vector3[3];
-    public Vector3 Eye = new Vector3(0.0f, -8.0f, 2.0f); // May be offset by constructor.
+    public Fixie Eye = new Fixie(0.0f, -8.0f, 2.0f);
     public Vector3 EyeDir = new Vector3(0.0f, 1.0f, 0.0f);
 
     public Matrix4x4 WorldToView = Matrix4x4.Identity;
@@ -113,7 +116,7 @@ class HighLevelRenderer
         Settings.TracingRate = FrustaCountX * FrustaCountY;
 
         WorldToView = Matrix4x4.CreateLookTo(
-            Eye,
+            Vector3.Zero,
             new Vector3(0.0f, 1.0f, 0.0f),
             new Vector3(0, 0, 1));
         InfinitePerspective(out ViewToClip, Settings.FieldOfView, AspectRatio, Settings.NearPlane);
@@ -170,7 +173,7 @@ class HighLevelRenderer
                 double P = 2.0 * Math.PI * Phase;
                 float S = (float)Math.Sin(T * Speed + P);
                 float C = (float)Math.Cos(T * Speed + P);
-                return Eye + new Vector3(S * 20.0f, C * 20.0f, 15.0f);
+                return Eye.ToVector3() + new Vector3(S * 20.0f, C * 20.0f, 15.0f);
             };
 
             LightPoints[0] = FindLightPosition(1.0, 0.0 / 3.0);
@@ -179,7 +182,7 @@ class HighLevelRenderer
         }
 
         WorldToView = Matrix4x4.CreateLookTo(
-            Eye,
+            Vector3.Zero,
             EyeDir,
             new Vector3(0, 0, 1));
 
@@ -292,17 +295,19 @@ class HighLevelRenderer
 
             var SplatRNG = new Random();
 
+            Vector3 CachedEye = Eye.ToVector3();
+
             for (int Cursor = SliceStart; Cursor < SliceStop; ++Cursor)
             {
                 Vector3 RayDir;
                 {
-                    #if true
+#if true
                     float JitterX = (float)SplatRNG.Next(-1000, 1000) / 1000.0f * 0.5f;
                     float JitterY = (float)SplatRNG.Next(-1000, 1000) / 1000.0f * 0.5f;
-                    #else
+#else
                     float JitterX = 0.0f;
                     float JitterY = 0.0f;
-                    #endif
+#endif
 
                     float FrustumX = (float)(Cursor % FrustaCountX) + 0.5f + JitterX;
                     float FrustumY = (float)(Cursor / FrustaCountX) + 0.5f + JitterY;
@@ -313,7 +318,7 @@ class HighLevelRenderer
                     ClipTarget.Z = -1;
                     ClipTarget.W = 1;
 
-                    #if true
+#if true
                     if (Tunneling > 0.0f || Math.Abs(Turning) > 0.0f)
                     {
                         Vector2 Offset;
@@ -346,12 +351,12 @@ class HighLevelRenderer
                         ClipTarget.X = Single.Lerp(ClipTarget.X, Point.X, Alpha);
                         ClipTarget.Y = Single.Lerp(ClipTarget.Y, Point.Y, Alpha);
                     }
-                    #endif
+#endif
 
-                    #if false
+#if false
                     ClipTarget.X *= 0.5f;
                     ClipTarget.Y *= 0.5f;
-                    #endif
+#endif
 
                     float Overscan = Single.Lerp(1.1f, 1.5f, Tunneling);
                     ClipTarget.X *= Overscan;
@@ -369,8 +374,8 @@ class HighLevelRenderer
                     RayDir = Vector3.TransformNormal(ViewRayDir, ViewToWorld);
                 }
 
-                var Start = Eye;
-                var Stop = RayDir * 100_000.0f + Eye;
+                var Start = CachedEye;
+                var Stop = RayDir * 100_000.0f + CachedEye;
 
                 if (Start != Stop)
                 {

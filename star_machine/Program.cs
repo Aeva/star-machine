@@ -79,7 +79,10 @@ struct PerformerStatus
     public float BrakeR;
 
     public bool Paused;
+
+    // For debugging
     public bool Reset;
+    public bool HardStop;
 
     public void UpdateTurn()
     {
@@ -227,7 +230,6 @@ internal class Program
                 ThisFrame.Start = DateTime.UtcNow.Ticks;
                 ThisFrame.ElapsedMs = (double)(ThisFrame.Start - LastFrame.Start) / (double)TimeSpan.TicksPerMillisecond;
                 ThisFrame.RunTimeMs = LastFrame.RunTimeMs + ThisFrame.ElapsedMs;
-                PlayerState.Reset = false;
 
                 SDL_Event Event;
                 while (SDL_PollEvent(out Event) != 0 && !Halt)
@@ -268,6 +270,14 @@ internal class Program
                             case SDL.SDL_Scancode.SDL_SCANCODE_R:
                                 PlayerState.Reset = true;
                                 break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_H:
+                                PlayerState.HardStop = true;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_W:
+                                Console.WriteLine($"Current position: {HighRenderer.Eye}");
+                                break;
                         }
                     }
                     else if (Event.type == SDL.SDL_EventType.SDL_EVENT_KEY_UP)
@@ -288,6 +298,14 @@ internal class Program
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_RIGHT:
                                 PlayerState.Right = false;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_R:
+                                PlayerState.Reset = false;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_H:
+                                PlayerState.HardStop = false;
                                 break;
                         }
                     }
