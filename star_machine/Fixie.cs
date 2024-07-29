@@ -98,6 +98,17 @@ public record struct FixedInt
     public static explicit operator double(FixedInt Other) => Other.ToDouble();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public (UInt32 Inner, UInt32 Outer) Split()
+    {
+        UInt64 UnsignedValue = (UInt64)Value;
+
+        (UInt32 Inner, UInt32 Outer) Result;
+        Result.Inner = (UInt32)(UnsignedValue);
+        Result.Outer = (UInt32)(UnsignedValue >> 32);
+        return Result;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static FixedInt Min(FixedInt LHS, FixedInt RHS)
     {
         LHS.Value = Math.Min(LHS.Value, RHS.Value);

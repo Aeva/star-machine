@@ -1,5 +1,8 @@
 
 using System.Reflection;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using Vector2 = System.Numerics.Vector2;
 using Vector3 = System.Numerics.Vector3;
 using Matrix4x4 = System.Numerics.Matrix4x4;
@@ -8,15 +11,45 @@ using static System.Buffer;
 using SDL3;
 using static SDL3.SDL;
 
+using FixedInt = FixedPoint.FixedInt;
+using Fixie = FixedPoint.Fixie;
+
 namespace StarMachine;
 
+[System.Runtime.CompilerServices.InlineArray(3)]
+public struct ivec3
+{
+    public Int32 _element0;
+}
 
+[System.Runtime.CompilerServices.InlineArray(3)]
+public struct uvec3
+{
+    public UInt32 _element0;
+}
+
+[System.Runtime.InteropServices.StructLayout(LayoutKind.Explicit)]
 struct ViewInfoUpload
 {
+    [System.Runtime.InteropServices.FieldOffset(0)]
     public Matrix4x4 WorldToView;
+
+    [System.Runtime.InteropServices.FieldOffset(64)]
     public Matrix4x4 ViewToClip;
+
+    [System.Runtime.InteropServices.FieldOffset(128)]
+    public uvec3 EyeInnerWorldPosition;
+
+    [System.Runtime.InteropServices.FieldOffset(144)]
+    public uvec3 EyeOuterWorldPosition;
+
+    [System.Runtime.InteropServices.FieldOffset(156)]
     public float SplatDiameter;
+
+    [System.Runtime.InteropServices.FieldOffset(160)]
     public float SplatDepth;
+
+    [System.Runtime.InteropServices.FieldOffset(164)]
     public float AspectRatio;
 }
 
@@ -29,7 +62,8 @@ class LowLevelRenderer
     private IntPtr DepthTexture = IntPtr.Zero;
     private IntPtr SplatVertexBuffer = IntPtr.Zero;
     private IntPtr SplatIndexBuffer = IntPtr.Zero;
-    private IntPtr SplatWorldPositionBuffer = IntPtr.Zero;
+    private IntPtr SplatInnerWorldPositionBuffer = IntPtr.Zero;
+    private IntPtr SplatOuterWorldPositionBuffer = IntPtr.Zero;
     private IntPtr SplatColorBuffer = IntPtr.Zero;
 
     private SplatGenerator SplatMesh;
@@ -143,6 +177,30 @@ class LowLevelRenderer
             {
                 UploadBytes(DestinationBuffer, (byte*)UploadDataPtr, UploadSize, Cycling);
             }
+        }
+    }
+
+    private void UploadFixies(IntPtr InnerBuffer, IntPtr OuterBuffer, Vector3[] UploadData, bool Cycling = false)
+    {
+        uint UploadSize = sizeof(Int32) * 3 * (uint)UploadData.Length;
+        unsafe
+        {
+            uvec3* InnerScratchSpace = stackalloc uvec3[UploadData.Length];
+            uvec3* OuterScratchSpace = stackalloc uvec3[UploadData.Length];
+            int Cursor = 0;
+            foreach (Vector3 Vertex in UploadData)
+            {
+                Fixie Fnord = new(Vertex);
+                for (int Lane = 0; Lane < 3; ++Lane)
+                {
+                    (InnerScratchSpace[Cursor][Lane], OuterScratchSpace[Cursor][Lane]) = Fnord.Lanes[Lane].Split();
+                }
+                ++Cursor;
+            }
+            Trace.Assert(Cursor == UploadData.Length);
+
+            UploadBytes(InnerBuffer, (byte*)InnerScratchSpace, UploadSize, Cycling);
+            UploadBytes(OuterBuffer, (byte*)OuterScratchSpace, UploadSize, Cycling);
         }
     }
 
@@ -306,7 +364,7 @@ class LowLevelRenderer
                     AttachmentInfo.depthStencilFormat = SDL.SDL_GpuTextureFormat.SDL_GPU_TEXTUREFORMAT_D32_SFLOAT;
                 }
 
-                const int VertexBindingCount = 3;
+                const int VertexBindingCount = 4;
                 SDL_GpuVertexBinding* VertexBindings = stackalloc SDL_GpuVertexBinding[VertexBindingCount];
                 {
                     // "LocalVertexOffset"
@@ -315,20 +373,26 @@ class LowLevelRenderer
                     VertexBindings[0].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_VERTEX;
                     VertexBindings[0].stepRate = 0;
 
-                    // "SplatWorldPosition"
+                    // "SplatInnerWorldPosition"
                     VertexBindings[1].binding = 1;
                     VertexBindings[1].stride = (uint)sizeof(Vector3);
                     VertexBindings[1].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_INSTANCE;
                     VertexBindings[1].stepRate = 1;
 
-                    // "SplatColor"
+                    // "SplatOuterWorldPosition"
                     VertexBindings[2].binding = 2;
                     VertexBindings[2].stride = (uint)sizeof(Vector3);
                     VertexBindings[2].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_INSTANCE;
                     VertexBindings[2].stepRate = 1;
+
+                    // "SplatColor"
+                    VertexBindings[3].binding = 3;
+                    VertexBindings[3].stride = (uint)sizeof(Vector3);
+                    VertexBindings[3].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_INSTANCE;
+                    VertexBindings[3].stepRate = 1;
                 }
 
-                const int VertexAttributeCount = 3;
+                const int VertexAttributeCount = 4;
                 SDL_GpuVertexAttribute* VertexAttributes = stackalloc SDL_GpuVertexAttribute[VertexAttributeCount];
                 {
                     // "LocalVertexOffset"
@@ -337,17 +401,23 @@ class LowLevelRenderer
                     VertexAttributes[0].format = SDL_GpuVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_VECTOR3;
                     VertexAttributes[0].offset = 0;
 
-                    // "SplatWorldPosition"
+                    // "SplatInnerWorldPosition"
                     VertexAttributes[1].location = 1;
                     VertexAttributes[1].binding = 1;
                     VertexAttributes[1].format = SDL_GpuVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_VECTOR3;
                     VertexAttributes[1].offset = 0;
 
-                    // "SplatColor"
+                    // "SplatOuterWorldPosition"
                     VertexAttributes[2].location = 2;
                     VertexAttributes[2].binding = 2;
                     VertexAttributes[2].format = SDL_GpuVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_VECTOR3;
                     VertexAttributes[2].offset = 0;
+
+                    // "SplatColor"
+                    VertexAttributes[3].location = 3;
+                    VertexAttributes[3].binding = 3;
+                    VertexAttributes[3].format = SDL_GpuVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_VECTOR3;
+                    VertexAttributes[3].offset = 0;
                 }
 
                 SDL_GpuVertexInputState VertexInputState = new();
@@ -412,10 +482,15 @@ class LowLevelRenderer
         }
 
         {
-            SplatWorldPositionBuffer = SDL_GpuCreateBuffer(
+            SplatInnerWorldPositionBuffer = SDL_GpuCreateBuffer(
                 Device,
                 (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
-                sizeof(float) * 3 * (uint)Settings.MaxSurfels);
+                sizeof(Int32) * 3 * (uint)Settings.MaxSurfels);
+
+            SplatOuterWorldPositionBuffer = SDL_GpuCreateBuffer(
+                Device,
+                (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+                sizeof(Int32) * 3 * (uint)Settings.MaxSurfels);
 
             SplatColorBuffer = SDL_GpuCreateBuffer(
                 Device,
@@ -456,7 +531,8 @@ class LowLevelRenderer
         if (Device != IntPtr.Zero)
         {
             MaybeReleaseBuffer(SplatColorBuffer);
-            MaybeReleaseBuffer(SplatWorldPositionBuffer);
+            MaybeReleaseBuffer(SplatInnerWorldPositionBuffer);
+            MaybeReleaseBuffer(SplatOuterWorldPositionBuffer);
             MaybeReleaseBuffer(SplatIndexBuffer);
             MaybeReleaseBuffer(SplatVertexBuffer);
             MaybeReleaseTexture(DepthTexture);
@@ -469,7 +545,7 @@ class LowLevelRenderer
 
     public bool Advance(FrameInfo Frame, RenderingConfig Settings, HighLevelRenderer HighRenderer)
     {
-        UploadVector3s(SplatWorldPositionBuffer, HighRenderer.PositionUpload, true);
+        UploadFixies(SplatInnerWorldPositionBuffer, SplatOuterWorldPositionBuffer, HighRenderer.PositionUpload, true);
         UploadVector3s(SplatColorBuffer, HighRenderer.ColorUpload, true);
 
         IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
@@ -511,8 +587,22 @@ class LowLevelRenderer
 
             ViewInfoUpload ViewInfo;
             {
+                Fixie FixedPointEye = new(HighRenderer.Eye);
+
                 ViewInfo.WorldToView = HighRenderer.WorldToView;
+                ViewInfo.WorldToView[3, 0] = 0.0f;
+                ViewInfo.WorldToView[3, 1] = 0.0f;
+                ViewInfo.WorldToView[3, 2] = 0.0f;
+
                 ViewInfo.ViewToClip = HighRenderer.ViewToClip;
+
+                ViewInfo.EyeInnerWorldPosition = new();
+                ViewInfo.EyeOuterWorldPosition = new();
+                for (int Lane = 0; Lane < 3; ++Lane)
+                {
+                    (ViewInfo.EyeInnerWorldPosition[Lane], ViewInfo.EyeOuterWorldPosition[Lane]) = FixedPointEye.Lanes[Lane].Split();
+                }
+
                 ViewInfo.SplatDiameter = HighRenderer.SplatDiameter;
                 ViewInfo.SplatDepth = Settings.SplatDepth;
                 ViewInfo.AspectRatio = Frame.AspectRatio;
@@ -536,14 +626,16 @@ class LowLevelRenderer
                 ScissorRect.h = (int)Height;
             }
 
-            Span<SDL_GpuBufferBinding> VertexBufferBindings = stackalloc SDL_GpuBufferBinding[3];
+            Span<SDL_GpuBufferBinding> VertexBufferBindings = stackalloc SDL_GpuBufferBinding[4];
             {
                 VertexBufferBindings[0].buffer = SplatVertexBuffer;
                 VertexBufferBindings[0].offset = 0;
-                VertexBufferBindings[1].buffer = SplatWorldPositionBuffer;
+                VertexBufferBindings[1].buffer = SplatInnerWorldPositionBuffer;
                 VertexBufferBindings[1].offset = 0;
-                VertexBufferBindings[2].buffer = SplatColorBuffer;
+                VertexBufferBindings[2].buffer = SplatOuterWorldPositionBuffer;
                 VertexBufferBindings[2].offset = 0;
+                VertexBufferBindings[3].buffer = SplatColorBuffer;
+                VertexBufferBindings[3].offset = 0;
             }
 
             SDL_GpuBufferBinding IndexBufferBinding;
@@ -566,7 +658,7 @@ class LowLevelRenderer
                     {
                         fixed (SDL_GpuBufferBinding* VertexBufferBindingsPtr = VertexBufferBindings)
                         {
-                            SDL_GpuBindVertexBuffers(RenderPass, 0, VertexBufferBindingsPtr, 3);
+                            SDL_GpuBindVertexBuffers(RenderPass, 0, VertexBufferBindingsPtr, 4);
                         }
                         SDL_GpuBindIndexBuffer(
                             RenderPass, &IndexBufferBinding, SDL_GpuIndexElementSize.SDL_GPU_INDEXELEMENTSIZE_16BIT);
