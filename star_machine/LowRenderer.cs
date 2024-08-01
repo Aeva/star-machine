@@ -40,10 +40,10 @@ struct ViewInfoUpload
     public Matrix4x4 ViewToClip;
 
     [System.Runtime.InteropServices.FieldOffset(128)]
-    public uvec3 EyeInnerWorldPosition;
+    public uvec3 EyeWorldPosition_L;
 
     [System.Runtime.InteropServices.FieldOffset(144)]
-    public uvec3 EyeOuterWorldPosition;
+    public uvec3 EyeWorldPosition_H;
 
     [System.Runtime.InteropServices.FieldOffset(156)]
     public float SplatDiameter;
@@ -64,8 +64,8 @@ class LowLevelRenderer
     private IntPtr DepthTexture = IntPtr.Zero;
     private IntPtr SplatVertexBuffer = IntPtr.Zero;
     private IntPtr SplatIndexBuffer = IntPtr.Zero;
-    private IntPtr SplatInnerWorldPositionBuffer = IntPtr.Zero;
-    private IntPtr SplatOuterWorldPositionBuffer = IntPtr.Zero;
+    private IntPtr SplatWorldPositionBuffer_L = IntPtr.Zero;
+    private IntPtr SplatWorldPositionBuffer_H = IntPtr.Zero;
     private IntPtr SplatColorBuffer = IntPtr.Zero;
 
     private SplatGenerator SplatMesh;
@@ -182,27 +182,27 @@ class LowLevelRenderer
         }
     }
 
-    private void UploadFixies(IntPtr InnerBuffer, IntPtr OuterBuffer, Vector3[] UploadData, bool Cycling = false)
+    private void UploadFixies(IntPtr Buffer_L, IntPtr Buffer_H, Vector3[] UploadData, bool Cycling = false)
     {
         uint UploadSize = sizeof(Int32) * 3 * (uint)UploadData.Length;
         unsafe
         {
-            uvec3* InnerScratchSpace = stackalloc uvec3[UploadData.Length];
-            uvec3* OuterScratchSpace = stackalloc uvec3[UploadData.Length];
+            uvec3* ScratchSpace_L = stackalloc uvec3[UploadData.Length];
+            uvec3* ScratchSpace_H = stackalloc uvec3[UploadData.Length];
             int Cursor = 0;
             foreach (Vector3 Vertex in UploadData)
             {
                 Fixie Fnord = new(Vertex);
                 for (int Lane = 0; Lane < 3; ++Lane)
                 {
-                    (InnerScratchSpace[Cursor][Lane], OuterScratchSpace[Cursor][Lane]) = Fnord.Lanes[Lane].Split();
+                    (ScratchSpace_L[Cursor][Lane], ScratchSpace_H[Cursor][Lane]) = Fnord.Lanes[Lane].Split();
                 }
                 ++Cursor;
             }
             Trace.Assert(Cursor == UploadData.Length);
 
-            UploadBytes(InnerBuffer, (byte*)InnerScratchSpace, UploadSize, Cycling);
-            UploadBytes(OuterBuffer, (byte*)OuterScratchSpace, UploadSize, Cycling);
+            UploadBytes(Buffer_L, (byte*)ScratchSpace_L, UploadSize, Cycling);
+            UploadBytes(Buffer_H, (byte*)ScratchSpace_H, UploadSize, Cycling);
         }
     }
 
@@ -375,13 +375,13 @@ class LowLevelRenderer
                     VertexBindings[0].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_VERTEX;
                     VertexBindings[0].stepRate = 0;
 
-                    // "SplatInnerWorldPosition"
+                    // "SplatWorldPosition_L"
                     VertexBindings[1].binding = 1;
                     VertexBindings[1].stride = (uint)sizeof(Vector3);
                     VertexBindings[1].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_INSTANCE;
                     VertexBindings[1].stepRate = 1;
 
-                    // "SplatOuterWorldPosition"
+                    // "SplatWorldPosition_H"
                     VertexBindings[2].binding = 2;
                     VertexBindings[2].stride = (uint)sizeof(Vector3);
                     VertexBindings[2].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_INSTANCE;
@@ -403,13 +403,13 @@ class LowLevelRenderer
                     VertexAttributes[0].format = SDL_GpuVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_VECTOR3;
                     VertexAttributes[0].offset = 0;
 
-                    // "SplatInnerWorldPosition"
+                    // "SplatWorldPosition_L"
                     VertexAttributes[1].location = 1;
                     VertexAttributes[1].binding = 1;
                     VertexAttributes[1].format = SDL_GpuVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_VECTOR3;
                     VertexAttributes[1].offset = 0;
 
-                    // "SplatOuterWorldPosition"
+                    // "SplatWorldPosition_H"
                     VertexAttributes[2].location = 2;
                     VertexAttributes[2].binding = 2;
                     VertexAttributes[2].format = SDL_GpuVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_VECTOR3;
@@ -484,12 +484,12 @@ class LowLevelRenderer
         }
 
         {
-            SplatInnerWorldPositionBuffer = SDL_GpuCreateBuffer(
+            SplatWorldPositionBuffer_L = SDL_GpuCreateBuffer(
                 Device,
                 (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
                 sizeof(Int32) * 3 * (uint)Settings.MaxSurfels);
 
-            SplatOuterWorldPositionBuffer = SDL_GpuCreateBuffer(
+            SplatWorldPositionBuffer_H = SDL_GpuCreateBuffer(
                 Device,
                 (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
                 sizeof(Int32) * 3 * (uint)Settings.MaxSurfels);
@@ -533,8 +533,8 @@ class LowLevelRenderer
         if (Device != IntPtr.Zero)
         {
             MaybeReleaseBuffer(SplatColorBuffer);
-            MaybeReleaseBuffer(SplatInnerWorldPositionBuffer);
-            MaybeReleaseBuffer(SplatOuterWorldPositionBuffer);
+            MaybeReleaseBuffer(SplatWorldPositionBuffer_L);
+            MaybeReleaseBuffer(SplatWorldPositionBuffer_H);
             MaybeReleaseBuffer(SplatIndexBuffer);
             MaybeReleaseBuffer(SplatVertexBuffer);
             MaybeReleaseTexture(DepthTexture);
@@ -547,7 +547,7 @@ class LowLevelRenderer
 
     public bool Advance(FrameInfo Frame, RenderingConfig Settings, HighLevelRenderer HighRenderer)
     {
-        UploadFixies(SplatInnerWorldPositionBuffer, SplatOuterWorldPositionBuffer, HighRenderer.PositionUpload, true);
+        UploadFixies(SplatWorldPositionBuffer_L, SplatWorldPositionBuffer_H, HighRenderer.PositionUpload, true);
         UploadVector3s(SplatColorBuffer, HighRenderer.ColorUpload, true);
 
         IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
@@ -592,13 +592,13 @@ class LowLevelRenderer
                 ViewInfo.WorldToView = HighRenderer.WorldToView;
                 ViewInfo.ViewToClip = HighRenderer.ViewToClip;
 
-                ViewInfo.EyeInnerWorldPosition = new();
-                ViewInfo.EyeOuterWorldPosition = new();
+                ViewInfo.EyeWorldPosition_L = new();
+                ViewInfo.EyeWorldPosition_H = new();
                 for (int Lane = 0; Lane < 3; ++Lane)
                 {
-                    (UInt32 Inner, UInt32 Outer) = HighRenderer.Eye.Lanes[Lane].Split();
-                    ViewInfo.EyeInnerWorldPosition[Lane] = Inner;
-                    ViewInfo.EyeOuterWorldPosition[Lane] = Outer;
+                    (UInt32 Low, UInt32 High) = HighRenderer.Eye.Lanes[Lane].Split();
+                    ViewInfo.EyeWorldPosition_L[Lane] = Low;
+                    ViewInfo.EyeWorldPosition_H[Lane] = High;
                 }
 
                 ViewInfo.SplatDiameter = HighRenderer.SplatDiameter;
@@ -628,9 +628,9 @@ class LowLevelRenderer
             {
                 VertexBufferBindings[0].buffer = SplatVertexBuffer;
                 VertexBufferBindings[0].offset = 0;
-                VertexBufferBindings[1].buffer = SplatInnerWorldPositionBuffer;
+                VertexBufferBindings[1].buffer = SplatWorldPositionBuffer_L;
                 VertexBufferBindings[1].offset = 0;
-                VertexBufferBindings[2].buffer = SplatOuterWorldPositionBuffer;
+                VertexBufferBindings[2].buffer = SplatWorldPositionBuffer_H;
                 VertexBufferBindings[2].offset = 0;
                 VertexBufferBindings[3].buffer = SplatColorBuffer;
                 VertexBufferBindings[3].offset = 0;

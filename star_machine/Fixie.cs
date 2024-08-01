@@ -100,13 +100,13 @@ public record struct FixedInt
     public static explicit operator double(FixedInt Other) => Other.ToDouble();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public (UInt32 Inner, UInt32 Outer) Split()
+    public (UInt32 L, UInt32 H) Split()
     {
         UInt64 UnsignedValue = (UInt64)Value;
 
-        (UInt32 Inner, UInt32 Outer) Result;
-        Result.Inner = (UInt32)(UnsignedValue);
-        Result.Outer = (UInt32)(UnsignedValue >> 32);
+        (UInt32 L, UInt32 H) Result;
+        Result.L = (UInt32)(UnsignedValue);
+        Result.H = (UInt32)(UnsignedValue >> 32);
         return Result;
     }
 

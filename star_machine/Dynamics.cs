@@ -21,7 +21,7 @@ class CharacterController
     private float Acceleration = 15.0f;
     private float TopSpeed = 4.0f * 1609.34f * 600.0f;
 
-#if true
+#if false
     private Vector3 LinearVelocity = new Vector3(0.0f, 10.0f, 0.0f);
 #else
     // Rough estimate of 600 mph, assuming one of the cubes is about a meter across.
