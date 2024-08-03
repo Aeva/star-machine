@@ -2,6 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using System.Globalization;
 
 using Vector3 = System.Numerics.Vector3;
 using Vector4 = System.Numerics.Vector4;
@@ -25,7 +26,12 @@ public record struct FixedInt
 
     public override string ToString()
     {
-        return ToDouble().ToString();
+
+        CultureInfo Fnord = (CultureInfo)CultureInfo.InvariantCulture.Clone();
+        Fnord.NumberFormat.NumberDecimalDigits = 3;
+        Fnord.NumberFormat.NumberGroupSeparator = "_";
+        Fnord.NumberFormat.NumberDecimalSeparator = ".";
+        return string.Create(Fnord, $"{ToDecimal():#,0.######}");
     }
 
     public FixedInt(FixedInt InValue)
@@ -85,6 +91,12 @@ public record struct FixedInt
         double Whole = (double)(Value >> UnitOffset);
         double Fract = (double)(Value & DecimalMask) / (double)UnitValue;
         return Whole + Fract;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public decimal ToDecimal()
+    {
+        return (decimal)Value / (decimal)UnitValue;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -619,6 +631,14 @@ public struct FixedPointTests
 {
     public static void PreflightCheck()
     {
+        // Does FixedInt.ToString return something sensible?
+        {
+            FixedInt Val = (FixedInt)(-100_000_000_000_000) + (FixedInt)(-0.54);
+            string Expected = "-100_000_000_000_000.540009";
+            string Got = Val.ToString();
+            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
+        }
+
         // Do negative numbers work?
         {
             FixedInt FixedPoint = new(-10.5f);
