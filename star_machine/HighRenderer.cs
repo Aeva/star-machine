@@ -56,6 +56,7 @@ class HighLevelRenderer
     public Vector3[] LightColors = new Vector3[3];
     public Fixie Eye = new Fixie(0.0f, -8.0f, 2.0f);
     public Vector3 EyeDir = new Vector3(0.0f, 1.0f, 0.0f);
+    public Fixie MovementProjection = Fixie.Zero;
 
     public Matrix4x4 WorldToView = Matrix4x4.Identity;
     public Matrix4x4 ViewToClip = Matrix4x4.Identity;
@@ -285,7 +286,7 @@ class HighLevelRenderer
 
         Vector3 MissColor = new Vector3(0.2f, 0.2f, 0.2f);
 
-        Fixie RelativeTracingOrigin = Model.RelativeTracingOrigin(Eye);
+        //Fixie RelativeTracingOrigin = Model.RelativeTracingOrigin(Eye);
 
         Parallel.ForEach(TracingPartitioner, (SliceParams, LoopState) =>
         {
@@ -297,7 +298,9 @@ class HighLevelRenderer
 
             var SplatRNG = new Random();
 
-            Vector3 CachedEye = (Eye - RelativeTracingOrigin).ToVector3();
+            Fixie ProjectedEye = Eye + MovementProjection;
+            Fixie RelativeTracingOrigin = Model.RelativeTracingOrigin(ProjectedEye);
+            Vector3 CachedEye = (ProjectedEye - RelativeTracingOrigin).ToVector3();
 
             for (int Cursor = SliceStart; Cursor < SliceStop; ++Cursor)
             {
@@ -316,7 +319,7 @@ class HighLevelRenderer
 
                     Vector4 ClipTarget;
                     ClipTarget.X = (FrustumX / (float)FrustaCountX * 2.0f - 1.0f);
-                    ClipTarget.Y = (FrustumY / (float)FrustaCountY * 2.0f - 1.0f);
+                    ClipTarget.Y = -(FrustumY / (float)FrustaCountY * 2.0f - 1.0f);
                     ClipTarget.Z = -1;
                     ClipTarget.W = 1;
 
@@ -389,7 +392,7 @@ class HighLevelRenderer
                         var SplatColor = new Vector3(0.0f, 0.0f, 0.0f);
                         for (int LightIndex = 0; LightIndex < LightPoints.Length; ++LightIndex)
                         {
-                            var LightPoint = (LightPoints[LightIndex] - RelativeTracingOrigin).ToVector3();
+                            var LightPoint = (LightPoints[LightIndex] + MovementProjection - RelativeTracingOrigin).ToVector3();
                             var LightColor = LightColors[LightIndex];
 
                             var Offset = Normal * 0.01f + Position;

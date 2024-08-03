@@ -49,6 +49,7 @@ public class RenderingConfig
 
 public struct FrameInfo
 {
+    public long Number;
     public long Start;
     public double ElapsedMs;
     public double RunTimeMs;
@@ -200,6 +201,9 @@ internal class Program
 
             FrameInfo LastFrame;
             FrameInfo ThisFrame;
+
+            LastFrame.Number = -1;
+            ThisFrame.Number = 0;
 
             LastFrame.Start = DateTime.UtcNow.Ticks;
             LastFrame.ElapsedMs = 0.0;
@@ -459,6 +463,7 @@ internal class Program
                     Halt = LowRenderer.Advance(ThisFrame, Settings, HighRenderer);
 
                     LastFrame = ThisFrame;
+                    ThisFrame.Number++;
                 }
             }
 

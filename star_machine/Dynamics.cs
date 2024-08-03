@@ -1,5 +1,4 @@
 
-
 using Vector3 = System.Numerics.Vector3;
 
 using SDL3;
@@ -21,12 +20,10 @@ class CharacterController
     private float Acceleration = 15.0f;
     private float TopSpeed = 4.0f * 1609.34f * 600.0f;
 
-#if false
-    private Vector3 LinearVelocity = new Vector3(0.0f, 10.0f, 0.0f);
-#else
-    // Rough estimate of 600 mph, assuming one of the cubes is about a meter across.
-    private Vector3 LinearVelocity = new Vector3(0.0f, 4.0f * 1609.34f * 600.0f, 0.0f);
-#endif
+    private Vector3 LinearVelocity = Vector3.Zero;
+
+    // Interpolated starting velocity, which peaks at 600 mph (assuming the cube things are a meter wide).
+    private Vector3 WarpVelocity = new Vector3(0.0f, 4.0f * 1609.34f * 600.0f, 0.0f);
 
     // Degrees per second
     private float TurnSpeed = 30.0f;
@@ -47,6 +44,12 @@ class CharacterController
         if (PlayerState.HardStop)
         {
             LinearVelocity = new Vector3(0.0f, 0.0f, 0.0f);
+        }
+        if (Frame.Number <= 240)
+        {
+            float Alpha = (float)Frame.Number / 240.0f;
+            Alpha = Single.Pow(Alpha, 8.0f);
+            LinearVelocity = Vector3.Lerp(LinearVelocity, WarpVelocity, Alpha);
         }
 
         float Seconds = (float)(Frame.ElapsedMs / 1000.0);
@@ -165,6 +168,7 @@ class CharacterController
             HighRenderer.Tunneling = Math.Clamp(HighRenderer.Tunneling, 0.0f, 1.0f);
             HighRenderer.GrainAlpha = HighRenderer.Tunneling * 0.4f;
             HighRenderer.GrainAlpha *= HighRenderer.GrainAlpha;
+            HighRenderer.MovementProjection = new Fixie(LinearVelocity * ((1.0f / 60.0f) * 1.0f));
         }
     }
 }
