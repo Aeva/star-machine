@@ -165,21 +165,6 @@ class CharacterController
             HighRenderer.Tunneling = Math.Clamp(HighRenderer.Tunneling, 0.0f, 1.0f);
             HighRenderer.GrainAlpha = HighRenderer.Tunneling * 0.4f;
             HighRenderer.GrainAlpha *= HighRenderer.GrainAlpha;
-#if true
-            // This is cheating and will not generalize, but it at least proves the "shadow world" phenomena that
-            // is experienced while moving at high speeds is caused by numeric issues due to floating point
-            // coordinates.  This Could hypothetically be made to be slightly less cheating by performing the tracing
-            // relative to the eye position and making the appropriate adjustments to place relative positions in the
-            // correct part of the repeating area, this is stil good news because extremely high speed movement
-            // is gameplay viable provided that the world is constructed piecewise.
-            {
-                int Iterations = 100;
-                float Span = 10.0f * (float)Iterations;
-                Fixie Splice = ((Fixie.Round(HighRenderer.Eye / Span) * Span));
-                HighRenderer.Eye.X -= Splice.X;
-                HighRenderer.Eye.Y -= Splice.Y;
-            }
-#endif
         }
     }
 }

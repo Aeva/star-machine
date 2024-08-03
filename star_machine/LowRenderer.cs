@@ -182,7 +182,7 @@ class LowLevelRenderer
         }
     }
 
-    private void UploadFixies(IntPtr Buffer_L, IntPtr Buffer_H, Vector3[] UploadData, bool Cycling = false)
+    private void UploadFixies(IntPtr Buffer_L, IntPtr Buffer_H, Fixie[] UploadData, bool Cycling = false)
     {
         uint UploadSize = sizeof(Int32) * 3 * (uint)UploadData.Length;
         unsafe
@@ -190,12 +190,11 @@ class LowLevelRenderer
             uvec3* ScratchSpace_L = stackalloc uvec3[UploadData.Length];
             uvec3* ScratchSpace_H = stackalloc uvec3[UploadData.Length];
             int Cursor = 0;
-            foreach (Vector3 Vertex in UploadData)
+            foreach (Fixie Vertex in UploadData)
             {
-                Fixie Fnord = new(Vertex);
                 for (int Lane = 0; Lane < 3; ++Lane)
                 {
-                    (ScratchSpace_L[Cursor][Lane], ScratchSpace_H[Cursor][Lane]) = Fnord.Lanes[Lane].Split();
+                    (ScratchSpace_L[Cursor][Lane], ScratchSpace_H[Cursor][Lane]) = Vertex.Lanes[Lane].Split();
                 }
                 ++Cursor;
             }

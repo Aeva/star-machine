@@ -15,8 +15,8 @@ using Fixie = FixedPoint.Fixie;
 
 namespace StarMachine;
 
-using SurfelList = List<(Vector3 Position, Vector3 Color)>;
-using ConcurrentSurfelQueue = ConcurrentQueue<List<(Vector3 Position, Vector3 Color)>>;
+using SurfelList = List<(Fixie Position, Vector3 Color)>;
+using ConcurrentSurfelQueue = ConcurrentQueue<List<(Fixie Position, Vector3 Color)>>;
 
 
 class HighLevelRenderer
@@ -37,7 +37,7 @@ class HighLevelRenderer
     public float GrainAlpha = 1.0f;
 
     // These are ring buffers for splat rendering.
-    public Vector3[] PositionUpload = Array.Empty<Vector3>();
+    public Fixie[] PositionUpload = Array.Empty<Fixie>();
     public Vector3[] ColorUpload = Array.Empty<Vector3>();
     public uint LiveSurfels = 0;
     public uint WriteCursor = 0;
@@ -52,7 +52,7 @@ class HighLevelRenderer
 
     public ConcurrentSurfelQueue PendingSurfels;
 
-    public Vector3[] LightPoints = new Vector3[3];
+    public Fixie[] LightPoints = new Fixie[3];
     public Vector3[] LightColors = new Vector3[3];
     public Fixie Eye = new Fixie(0.0f, -8.0f, 2.0f);
     public Vector3 EyeDir = new Vector3(0.0f, 1.0f, 0.0f);
@@ -124,7 +124,7 @@ class HighLevelRenderer
         ClipToView = Matrix4x4.Identity;
         Matrix4x4.Invert(ViewToClip, out ClipToView);
 
-        PositionUpload = new Vector3[Settings.MaxSurfels];
+        PositionUpload = new Fixie[Settings.MaxSurfels];
         ColorUpload = new Vector3[Settings.MaxSurfels];
 
         {
@@ -173,7 +173,7 @@ class HighLevelRenderer
                 double P = 2.0 * Math.PI * Phase;
                 float S = (float)Math.Sin(T * Speed + P);
                 float C = (float)Math.Cos(T * Speed + P);
-                return Eye.ToVector3() + new Vector3(S * 20.0f, C * 20.0f, 15.0f);
+                return Eye + new Fixie(S * 20.0f, C * 20.0f, 15.0f);
             };
 
             LightPoints[0] = FindLightPosition(1.0, 0.0 / 3.0);
@@ -198,7 +198,7 @@ class HighLevelRenderer
             {
                 foreach (var Surfel in SurfelBatch)
                 {
-                    (Vector3 Position, Vector3 Color) = Surfel;
+                    (Fixie Position, Vector3 Color) = Surfel;
 
                     PositionUpload[WriteCursor] = Position;
                     ColorUpload[WriteCursor] = Color;
@@ -285,6 +285,8 @@ class HighLevelRenderer
 
         Vector3 MissColor = new Vector3(0.2f, 0.2f, 0.2f);
 
+        Fixie RelativeTracingOrigin = Model.RelativeTracingOrigin(Eye);
+
         Parallel.ForEach(TracingPartitioner, (SliceParams, LoopState) =>
         {
             int SliceStart = SliceParams.Item1;
@@ -295,7 +297,7 @@ class HighLevelRenderer
 
             var SplatRNG = new Random();
 
-            Vector3 CachedEye = Eye.ToVector3();
+            Vector3 CachedEye = (Eye - RelativeTracingOrigin).ToVector3();
 
             for (int Cursor = SliceStart; Cursor < SliceStop; ++Cursor)
             {
@@ -387,7 +389,7 @@ class HighLevelRenderer
                         var SplatColor = new Vector3(0.0f, 0.0f, 0.0f);
                         for (int LightIndex = 0; LightIndex < LightPoints.Length; ++LightIndex)
                         {
-                            var LightPoint = LightPoints[LightIndex];//Vector3.Transform(LightPoints[LightIndex], WorldToLocal);
+                            var LightPoint = (LightPoints[LightIndex] - RelativeTracingOrigin).ToVector3();
                             var LightColor = LightColors[LightIndex];
 
                             var Offset = Normal * 0.01f + Position;
@@ -402,13 +404,15 @@ class HighLevelRenderer
                                 SplatColor += LightColor * Luminence;
                             }
                         }
-                        NewSurfels.Add((Position, SplatColor));
+                        Fixie SplatPosition = RelativeTracingOrigin + new Fixie(Position);
+                        NewSurfels.Add((SplatPosition, SplatColor));
                         continue;
                     }
                 }
                 {
                     //NewSurfels.Add((new Vector4(Stop, 1.0f), new Vector4(-RayDir, 1.0f), Color.CornflowerBlue));
-                    NewSurfels.Add((Stop, MissColor));
+                    Fixie SplatPosition = RelativeTracingOrigin + new Fixie(Stop);
+                    NewSurfels.Add((SplatPosition, MissColor));
                     continue;
                 }
             }

@@ -4,6 +4,10 @@ using Vector3 = System.Numerics.Vector3;
 
 using static Evaluator.ProgramBuffer;
 
+using FixedInt = FixedPoint.FixedInt;
+using Fixie = FixedPoint.Fixie;
+
+
 namespace StarMachine;
 
 
@@ -14,6 +18,12 @@ class TracingGrist
     public TracingGrist(Evaluator.ProgramBuffer InModel)
     {
         Model = InModel;
+    }
+
+    public Fixie RelativeTracingOrigin(Fixie Eye)
+    {
+        float Span = 10.0f;
+        return ((Fixie.Round(Eye / Span) * Span));
     }
 
     public float Eval(Vector3 Point)
