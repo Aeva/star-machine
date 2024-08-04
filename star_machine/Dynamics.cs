@@ -175,12 +175,7 @@ class CharacterController
             if (Magnitude > 0.01f)
             {
                 HighRenderer.Tunneling += 1.0f * Seconds;
-#if false
-                float ElapsedSeconds = 1.0f / 60.0f;
-#else
-                // Should be more correct on fast screens, but doesn't feel as exciting?
                 float ElapsedSeconds = (float)(Frame.ElapsedMs / 1000.0);
-#endif
                 HighRenderer.MovementProjection = new Fixie(LinearVelocity * ElapsedSeconds);
             }
             else
