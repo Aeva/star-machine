@@ -196,8 +196,8 @@ class CharacterController
                 HighRenderer.MovementProjection = Fixie.Zero;
             }
             HighRenderer.Tunneling = Math.Clamp(HighRenderer.Tunneling, 0.0f, 1.0f);
-            //HighRenderer.GrainAlpha = HighRenderer.Tunneling * 0.4f;
-            //HighRenderer.GrainAlpha *= HighRenderer.GrainAlpha;
+            HighRenderer.GrainAlpha = HighRenderer.Tunneling * 0.4f;
+            HighRenderer.GrainAlpha *= HighRenderer.GrainAlpha;
         }
     }
 }

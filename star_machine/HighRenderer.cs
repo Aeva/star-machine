@@ -34,7 +34,7 @@ class HighLevelRenderer
     // Maybe these belong on the character controller class instead?
     public float Turning = 0.0f;
     public float Tunneling = 0.25f;
-    public float GrainAlpha = 0.0f;//1.0f;
+    public float GrainAlpha = 1.0f;
 
     // These are ring buffers for splat rendering.
     public Fixie[] PositionUpload = Array.Empty<Fixie>();
