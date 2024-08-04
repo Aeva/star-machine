@@ -251,7 +251,7 @@ class LowLevelRenderer
             WindowFlags |= SDL.SDL_WINDOW_FULLSCREEN;
         }
 
-        Window = SDL_CreateWindow("Star Machine"u8, 900, 900, WindowFlags);
+        Window = SDL_CreateWindow("Star Machine"u8, 2256, 1504, WindowFlags);
         if (Window == IntPtr.Zero)
         {
             Console.WriteLine("SDL3 failed to create a window.");

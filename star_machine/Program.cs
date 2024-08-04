@@ -40,7 +40,7 @@ public class RenderingConfig
     public double NearPlane = 0.001;
 
     // Start in fullscreen mode.
-    public bool Fullscreen = true;
+    public bool Fullscreen = false;
 
     // Whether to use paraboloids or discs.
     public bool ParaboloidSplats = true;
@@ -290,6 +290,10 @@ internal class Program
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_W:
                                 Console.WriteLine($"Current position: {HighRenderer.Eye}");
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_Z:
+                                ThisFrame.Number = 0;
                                 break;
                         }
                     }

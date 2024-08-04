@@ -6,6 +6,7 @@ using static SDL3.SDL;
 
 using FixedInt = FixedPoint.FixedInt;
 using Fixie = FixedPoint.Fixie;
+using System.Reflection;
 
 
 namespace StarMachine;
@@ -23,6 +24,9 @@ class CharacterController
     private Vector3 LinearVelocity = Vector3.Zero;
 
     // Interpolated starting velocity, which peaks at 600 mph (assuming the cube things are a meter wide).
+    private Vector3 FastVelocity = new Vector3(0.0f, 4.0f * 0.44704f * 600.0f, 0.0f);
+
+    // Interpolated starting velocity, which peaks at 600 miles per second (assuming the cube things are a meter wide).
     private Vector3 WarpVelocity = new Vector3(0.0f, 4.0f * 1609.34f * 600.0f, 0.0f);
 
     // Degrees per second
@@ -41,7 +45,7 @@ class CharacterController
             HighRenderer.Eye = new Fixie(0.0f, -8.0f, 2.0f);
             HighRenderer.EyeDir = new Vector3(0.0f, 1.0f, 0.0f);
         }
-        if (PlayerState.HardStop)
+        if (PlayerState.HardStop || Frame.Number == 0)
         {
             LinearVelocity = new Vector3(0.0f, 0.0f, 0.0f);
         }
@@ -66,11 +70,21 @@ class CharacterController
                 PlayerState.Align = false;
             }
         }
-        if (Frame.Number <= 240)
+        if (Frame.Number > 0 && Frame.Number <= 120)
         {
-            float Alpha = (float)Frame.Number / 240.0f;
-            Alpha = Single.Pow(Alpha, 8.0f);
-            LinearVelocity = Vector3.Lerp(LinearVelocity, WarpVelocity, Alpha);
+            float Alpha = (float)(Frame.Number) / 120.0f;
+            Alpha = Single.Pow(Alpha, 16.0f);
+            LinearVelocity = Vector3.Lerp(Vector3.Zero, FastVelocity, Alpha);
+        }
+        else if (Frame.Number > 120 && Frame.Number <= 400)
+        {
+            LinearVelocity = FastVelocity;
+        }
+        else if (Frame.Number > 400 && Frame.Number <= 520)
+        {
+            float Alpha = (float)(Frame.Number - 400) / 120.0f;
+            Alpha = Single.Pow(Alpha, 16.0f);
+            LinearVelocity = Vector3.Lerp(FastVelocity, WarpVelocity, Alpha);
         }
 
         float Seconds = (float)(Frame.ElapsedMs / 1000.0);
@@ -143,15 +157,18 @@ class CharacterController
                 float Remainder = Magnitude * Seconds + 0.1f;
                 Vector3 Dir = Vector3.Normalize(LinearVelocity);
 
+                Fixie RelativeTracingOrigin = HighRenderer.Model.RelativeTracingOrigin(HighRenderer.Eye);
+                Fixie EffectiveEye = HighRenderer.Eye - RelativeTracingOrigin;
+
                 for (int i = 0; i < 100 && Remainder > 0.01f; ++i)
                 {
-                    (bool Hit, float Travel) = HighRenderer.Model.TravelTrace(HighRenderer.Eye.ToVector3(), Dir, Remainder, 0.125f);
+                    (bool Hit, float Travel) = HighRenderer.Model.TravelTrace(EffectiveEye.ToVector3(), Dir, Remainder, 0.125f);
                     Remainder = Math.Max(0.0f, Remainder - Travel);
-                    HighRenderer.Eye += Dir * Travel;
+                    EffectiveEye += Dir * Travel;
 
                     if (Hit)
                     {
-                        Vector3 Normal = HighRenderer.Model.Gradient(HighRenderer.Eye.ToVector3());
+                        Vector3 Normal = HighRenderer.Model.Gradient(EffectiveEye.ToVector3());
                         Normal.Z = 0.0f;
                         float LenSquared = Vector3.Dot(Normal, Normal);
                         if (LenSquared > 0.0f)
@@ -167,6 +184,8 @@ class CharacterController
                         }
                     }
                 }
+
+                HighRenderer.Eye = EffectiveEye + RelativeTracingOrigin;
 
                 Magnitude = LinearVelocity.Length();
                 LinearVelocity = Dir * Magnitude;
