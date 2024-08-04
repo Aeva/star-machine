@@ -203,8 +203,13 @@ class LowLevelRenderer
         uint UploadSize = sizeof(Int32) * 3 * (uint)UploadData.Length;
         unsafe
         {
+#if false
             uvec3* ScratchSpace_L = stackalloc uvec3[UploadData.Length];
             uvec3* ScratchSpace_H = stackalloc uvec3[UploadData.Length];
+#else
+            uvec3[] ScratchSpace_L = new uvec3[UploadData.Length];
+            uvec3[] ScratchSpace_H = new uvec3[UploadData.Length];
+#endif
             int Cursor = 0;
             foreach (Fixie Vertex in UploadData)
             {
@@ -216,8 +221,19 @@ class LowLevelRenderer
             }
             Trace.Assert(Cursor == UploadData.Length);
 
+#if false
             UploadBytes(Buffer_L, (byte*)ScratchSpace_L, UploadSize, Cycling);
             UploadBytes(Buffer_H, (byte*)ScratchSpace_H, UploadSize, Cycling);
+#else
+            fixed (uvec3* UploadDataPtr = ScratchSpace_L)
+            {
+                UploadBytes(Buffer_L, (byte*)UploadDataPtr, UploadSize, Cycling);
+            }
+            fixed (uvec3* UploadDataPtr = ScratchSpace_H)
+            {
+                UploadBytes(Buffer_H, (byte*)UploadDataPtr, UploadSize, Cycling);
+            }
+#endif
         }
     }
 
@@ -241,14 +257,20 @@ class LowLevelRenderer
             Console.WriteLine("SDL3 failed to create a window.");
             return true;
         }
+        if (Settings.Fullscreen)
+        {
+            IntPtr Fnord = SDL.SDL_GetWindowFullscreenMode(Window);
+            Console.WriteLine($"Borderless fullscreen mode: {Fnord == 0}");
+        }
 
         {
             const int DebugMode = 1;
             const int PreferLowPower = 0;
             var Backends = new ulong[]
             {
-                (ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_D3D11,
-                (ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_METAL,
+                // usubBorrow does not seem to be available in D3D11 :(
+                //(ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_D3D11,
+                //(ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_METAL,
                 (ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_VULKAN,
             };
             foreach (ulong BackendFlag in Backends)

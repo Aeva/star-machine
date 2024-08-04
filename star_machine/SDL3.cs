@@ -19,6 +19,7 @@ using SDL_GpuColorComponentFlags = System.UInt32;
 using SDL_GpuBackend = System.UInt64;
 
 using SDL_Window_Ptr = System.IntPtr;
+using SDL_DisplayMode_Ptr = System.IntPtr;
 using SDL_IOStream_Ptr = System.IntPtr;
 using SDL_Gamepad_Ptr = System.IntPtr;
 using SDL_Surface_Ptr = System.IntPtr;
@@ -1320,6 +1321,40 @@ namespace SDL3
         public static extern float SDL_GetWindowDisplayScale(SDL_Window_Ptr window);
 
         /**
+         * Set the display mode to use when a window is visible and fullscreen.
+         *
+         * This only affects the display mode used when the window is fullscreen. To
+         * change the window size when the window is not fullscreen, use
+         * SDL_SetWindowSize().
+         *
+         * If the window is currently in the fullscreen state, this request is
+         * asynchronous on some windowing systems and the new mode dimensions may not
+         * be applied immediately upon the return of this function. If an immediate
+         * change is required, call SDL_SyncWindow() to block until the changes have
+         * taken effect.
+         *
+         * When the new mode takes effect, an SDL_EVENT_WINDOW_RESIZED and/or an
+         * SDL_EVENT_WINDOOW_PIXEL_SIZE_CHANGED event will be emitted with the new
+         * mode dimensions.
+         *
+         * \param window the window to affect.
+         * \param mode a pointer to the display mode to use, which can be NULL for
+         *             borderless fullscreen desktop mode, or one of the fullscreen
+         *             modes returned by SDL_GetFullscreenDisplayModes() to set an
+         *             exclusive fullscreen mode.
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_GetWindowFullscreenMode
+         * \sa SDL_SetWindowFullscreen
+         * \sa SDL_SyncWindow
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int SDL_SetWindowFullscreenMode(SDL_Window_Ptr window, SDL_DisplayMode_Ptr mode);
+
+        /**
          * Query the display mode to use when a window is visible at fullscreen.
          *
          * \param window the window to query.
@@ -1332,7 +1367,38 @@ namespace SDL3
          * \sa SDL_SetWindowFullscreen
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern SDL_DisplayMode SDL_GetWindowFullscreenMode(SDL_Window_Ptr window);
+        public static extern SDL_DisplayMode_Ptr SDL_GetWindowFullscreenMode(SDL_Window_Ptr window);
+
+        /**
+         * Request that the window's fullscreen state be changed.
+         *
+         * By default a window in fullscreen state uses borderless fullscreen desktop
+         * mode, but a specific exclusive display mode can be set using
+         * SDL_SetWindowFullscreenMode().
+         *
+         * On some windowing systems this request is asynchronous and the new
+         * fullscreen state may not have have been applied immediately upon the return
+         * of this function. If an immediate change is required, call SDL_SyncWindow()
+         * to block until the changes have taken effect.
+         *
+         * When the window state changes, an SDL_EVENT_WINDOW_ENTER_FULLSCREEN or
+         * SDL_EVENT_WINDOW_LEAVE_FULLSCREEN event will be emitted. Note that, as this
+         * is just a request, it can be denied by the windowing system.
+         *
+         * \param window the window to change.
+         * \param fullscreen SDL_TRUE for fullscreen mode, SDL_FALSE for windowed
+         *                   mode.
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_GetWindowFullscreenMode
+         * \sa SDL_SetWindowFullscreenMode
+         * \sa SDL_SyncWindow
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int SDL_SetWindowFullscreen(SDL_Window_Ptr window, SDL_bool fullscreen);
 
         /**
          * Create a window with the specified dimensions and flags.

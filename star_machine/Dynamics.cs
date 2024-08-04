@@ -47,12 +47,24 @@ class CharacterController
         }
         if (PlayerState.Align)
         {
-            CurrentHeading = Single.Lerp(CurrentHeading, Single.Round(CurrentHeading / 90.0f) * 90.0f, 0.1f);
+            float TargetHeading = Single.Round(CurrentHeading / 90.0f) * 90.0f;
+            CurrentHeading = Single.Lerp(CurrentHeading, TargetHeading, 1.0f * (float)(Frame.ElapsedMs / 1000.0));
+            bool Snap = Single.Abs(TargetHeading - CurrentHeading) <= 0.5f;
+
             float Radians = (float)(Math.PI / 180.0) * CurrentHeading;
-            HighRenderer.EyeDir.X = (float)Math.Sin(Radians);
-            HighRenderer.EyeDir.Y = (float)Math.Cos(Radians);
+            HighRenderer.EyeDir.X = Single.Sin(Radians);
+            HighRenderer.EyeDir.Y = Single.Cos(Radians);
             HighRenderer.EyeDir.Z = 0.0f;
             HighRenderer.EyeDir = Vector3.Normalize(HighRenderer.EyeDir);
+
+            if (Snap)
+            {
+                CurrentHeading = TargetHeading;
+                HighRenderer.EyeDir.X = Single.Round(HighRenderer.EyeDir.X);
+                HighRenderer.EyeDir.Y = Single.Round(HighRenderer.EyeDir.Y);
+                LinearVelocity = HighRenderer.EyeDir * LinearVelocity.Length();
+                PlayerState.Align = false;
+            }
         }
         if (Frame.Number <= 240)
         {
@@ -116,6 +128,7 @@ class CharacterController
             }
         }
 
+        if (!PlayerState.Paused)
         {
             float Magnitude = LinearVelocity.Length();
             if (Magnitude > TopSpeed)
@@ -162,7 +175,13 @@ class CharacterController
             if (Magnitude > 0.01f)
             {
                 HighRenderer.Tunneling += 1.0f * Seconds;
-                HighRenderer.MovementProjection = new Fixie(LinearVelocity * ((1.0f / 60.0f) * 1.0f));
+#if true
+                float ElapsedSeconds = 1.0f / 60.0f;
+#else
+                // Should be more correct on fast screens, but doesn't feel as exciting?
+                float ElapsedSeconds = (float)(Frame.ElapsedMs / 1000.0);
+#endif
+                HighRenderer.MovementProjection = new Fixie(LinearVelocity * ElapsedSeconds);
             }
             else
             {
@@ -177,8 +196,8 @@ class CharacterController
                 HighRenderer.MovementProjection = Fixie.Zero;
             }
             HighRenderer.Tunneling = Math.Clamp(HighRenderer.Tunneling, 0.0f, 1.0f);
-            HighRenderer.GrainAlpha = HighRenderer.Tunneling * 0.4f;
-            HighRenderer.GrainAlpha *= HighRenderer.GrainAlpha;
+            //HighRenderer.GrainAlpha = HighRenderer.Tunneling * 0.4f;
+            //HighRenderer.GrainAlpha *= HighRenderer.GrainAlpha;
         }
     }
 }

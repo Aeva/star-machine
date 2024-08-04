@@ -1,6 +1,11 @@
 #version 450
 
+#extension GL_GOOGLE_include_directive : enable
+#if !GL_GOOGLE_include_directive
 #extension GL_ARB_shading_language_include : require
+#endif
+
+
 #include "Fixie.glsl"
 
 

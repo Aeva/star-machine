@@ -34,7 +34,7 @@ class HighLevelRenderer
     // Maybe these belong on the character controller class instead?
     public float Turning = 0.0f;
     public float Tunneling = 0.25f;
-    public float GrainAlpha = 1.0f;
+    public float GrainAlpha = 0.0f;//1.0f;
 
     // These are ring buffers for splat rendering.
     public Fixie[] PositionUpload = Array.Empty<Fixie>();
@@ -286,8 +286,6 @@ class HighLevelRenderer
 
         Vector3 MissColor = new Vector3(0.2f, 0.2f, 0.2f);
 
-        //Fixie RelativeTracingOrigin = Model.RelativeTracingOrigin(Eye);
-
         Parallel.ForEach(TracingPartitioner, (SliceParams, LoopState) =>
         {
             int SliceStart = SliceParams.Item1;
@@ -379,8 +377,9 @@ class HighLevelRenderer
                     RayDir = Vector3.TransformNormal(ViewRayDir, ViewToWorld);
                 }
 
+                // For some reason, 100_000.0f as a max draw distance works fine on my Linux laptop but not on my Windows desktop?
                 var Start = CachedEye;
-                var Stop = RayDir * 100_000.0f + CachedEye;
+                var Stop = RayDir * 10_000.0f + CachedEye;
 
                 if (Start != Stop)
                 {
