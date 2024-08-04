@@ -10,6 +10,8 @@ uniform ViewInfoBlock
     mat4 WorldToView;
     mat4 ViewToClip;
 
+    vec4 MovementProjection;
+
     uvec3 EyeWorldPosition_L;
     uvec3 EyeWorldPosition_H;
 
@@ -35,6 +37,11 @@ void main()
     vec4 ViewPosition = WorldToView * vec4(SplatViewPosition, 1.0f);
     ViewPosition /= ViewPosition.w;
     ViewPosition.z += LocalVertexOffset.z * SplatDepth;
+
+    vec3 SmearDir = -MovementProjection.xyz;
+    vec3 MotionOffset = SmearDir * min(MovementProjection.w, 1000.0f);
+    ViewPosition.xyz += MotionOffset * max(dot(LocalVertexOffset.xy, SmearDir.xz), 0.0f);
+
 
     vec4 ClipPosition = ViewToClip * ViewPosition;
     ClipPosition.xyz /= ClipPosition.w;

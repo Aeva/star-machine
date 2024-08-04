@@ -45,6 +45,15 @@ class CharacterController
         {
             LinearVelocity = new Vector3(0.0f, 0.0f, 0.0f);
         }
+        if (PlayerState.Align)
+        {
+            CurrentHeading = Single.Lerp(CurrentHeading, Single.Round(CurrentHeading / 90.0f) * 90.0f, 0.1f);
+            float Radians = (float)(Math.PI / 180.0) * CurrentHeading;
+            HighRenderer.EyeDir.X = (float)Math.Sin(Radians);
+            HighRenderer.EyeDir.Y = (float)Math.Cos(Radians);
+            HighRenderer.EyeDir.Z = 0.0f;
+            HighRenderer.EyeDir = Vector3.Normalize(HighRenderer.EyeDir);
+        }
         if (Frame.Number <= 240)
         {
             float Alpha = (float)Frame.Number / 240.0f;
@@ -88,7 +97,7 @@ class CharacterController
             HighRenderer.Turning = 0.0f;
         }
 
-        if (PlayerState.Gas > 0.0f)
+        if (PlayerState.Gas > 0.0f && !PlayerState.HardStop)
         {
             LinearVelocity += HighRenderer.EyeDir * Acceleration * Seconds * PlayerState.Gas;
         }
@@ -153,6 +162,7 @@ class CharacterController
             if (Magnitude > 0.01f)
             {
                 HighRenderer.Tunneling += 1.0f * Seconds;
+                HighRenderer.MovementProjection = new Fixie(LinearVelocity * ((1.0f / 60.0f) * 1.0f));
             }
             else
             {
@@ -164,11 +174,11 @@ class CharacterController
                 {
                     HighRenderer.Tunneling = 0.0f;
                 }
+                HighRenderer.MovementProjection = Fixie.Zero;
             }
             HighRenderer.Tunneling = Math.Clamp(HighRenderer.Tunneling, 0.0f, 1.0f);
             HighRenderer.GrainAlpha = HighRenderer.Tunneling * 0.4f;
             HighRenderer.GrainAlpha *= HighRenderer.GrainAlpha;
-            HighRenderer.MovementProjection = new Fixie(LinearVelocity * ((1.0f / 60.0f) * 1.0f));
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using Vector2 = System.Numerics.Vector2;
 using Vector3 = System.Numerics.Vector3;
+using Vector4 = System.Numerics.Vector4;
 using Matrix4x4 = System.Numerics.Matrix4x4;
 using static System.Buffer;
 
@@ -30,6 +31,18 @@ public struct uvec3
     public UInt32 _element0;
 }
 
+[System.Runtime.CompilerServices.InlineArray(3)]
+public struct vec3
+{
+    public float _element0;
+}
+
+[System.Runtime.CompilerServices.InlineArray(4)]
+public struct vec4
+{
+    public float _element0;
+}
+
 [System.Runtime.InteropServices.StructLayout(LayoutKind.Explicit)]
 struct ViewInfoUpload
 {
@@ -40,18 +53,21 @@ struct ViewInfoUpload
     public Matrix4x4 ViewToClip;
 
     [System.Runtime.InteropServices.FieldOffset(128)]
-    public uvec3 EyeWorldPosition_L;
+    public vec4 MovementProjection;
 
     [System.Runtime.InteropServices.FieldOffset(144)]
-    public uvec3 EyeWorldPosition_H;
-
-    [System.Runtime.InteropServices.FieldOffset(156)]
-    public float SplatDiameter;
+    public uvec3 EyeWorldPosition_L;
 
     [System.Runtime.InteropServices.FieldOffset(160)]
+    public uvec3 EyeWorldPosition_H;
+
+    [System.Runtime.InteropServices.FieldOffset(172)]
+    public float SplatDiameter;
+
+    [System.Runtime.InteropServices.FieldOffset(176)]
     public float SplatDepth;
 
-    [System.Runtime.InteropServices.FieldOffset(164)]
+    [System.Runtime.InteropServices.FieldOffset(180)]
     public float AspectRatio;
 }
 
@@ -590,6 +606,18 @@ class LowLevelRenderer
             {
                 ViewInfo.WorldToView = HighRenderer.WorldToView;
                 ViewInfo.ViewToClip = HighRenderer.ViewToClip;
+
+                ViewInfo.MovementProjection = new();
+                {
+                    (Fixie Dir, FixedInt Mag) = Fixie.Normalize(HighRenderer.MovementProjection);
+                    Vector4 WorldDir = Dir.ToVector4();
+                    Vector4 ViewDir = Vector4.Transform(WorldDir, HighRenderer.WorldToView);
+                    ViewDir /= ViewDir.W;
+                    ViewInfo.MovementProjection[0] = ViewDir[0];
+                    ViewInfo.MovementProjection[1] = ViewDir[1];
+                    ViewInfo.MovementProjection[2] = ViewDir[2];
+                    ViewInfo.MovementProjection[3] = (float)Mag;
+                }
 
                 ViewInfo.EyeWorldPosition_L = new();
                 ViewInfo.EyeWorldPosition_H = new();

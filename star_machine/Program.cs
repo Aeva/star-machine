@@ -84,6 +84,7 @@ struct PerformerStatus
     // For debugging
     public bool Reset;
     public bool HardStop;
+    public bool Align;
 
     public void UpdateTurn()
     {
@@ -255,10 +256,12 @@ internal class Program
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_UP:
                                 PlayerState.Up = true;
+                                PlayerState.Gas = 1.0f;
                                 break;
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_DOWN:
                                 PlayerState.Down = true;
+                                PlayerState.Brake = 1.0f;
                                 break;
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_LEFT:
@@ -281,6 +284,10 @@ internal class Program
                                 PlayerState.HardStop = true;
                                 break;
 
+                            case SDL.SDL_Scancode.SDL_SCANCODE_A:
+                                PlayerState.Align = true;
+                                break;
+
                             case SDL.SDL_Scancode.SDL_SCANCODE_W:
                                 Console.WriteLine($"Current position: {HighRenderer.Eye}");
                                 break;
@@ -292,10 +299,12 @@ internal class Program
                         {
                             case SDL.SDL_Scancode.SDL_SCANCODE_UP:
                                 PlayerState.Up = false;
+                                PlayerState.Gas = 0.0f;
                                 break;
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_DOWN:
                                 PlayerState.Down = false;
+                                PlayerState.Brake = 0.0f;
                                 break;
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_LEFT:
@@ -312,6 +321,10 @@ internal class Program
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_H:
                                 PlayerState.HardStop = false;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_A:
+                                PlayerState.Align = false;
                                 break;
                         }
                     }
@@ -385,6 +398,7 @@ internal class Program
                     }
                 }
 
+#if false
                 if (GamePad != 0)
                 {
                     ushort LowVibe = 0;
@@ -451,6 +465,7 @@ internal class Program
                         SDL.SDL_RumbleGamepad(GamePad, LowVibe, HighVibe, Pulse);
                     }
                 }
+#endif
 
                 if (!Halt)
                 {
