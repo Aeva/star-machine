@@ -43,12 +43,22 @@ void main()
     ViewPosition /= ViewPosition.w;
     ViewPosition.z += LocalVertexOffset.z * SplatDepth;
 
-    vec3 SmearDir = -MovementProjection.xyz;
-    vec3 MotionOffset = SmearDir * min(MovementProjection.w, 1000.0f);
-    ViewPosition.xyz += MotionOffset * max(dot(LocalVertexOffset.xy, SmearDir.xz), 0.0f);
+    float WarpTail = min(MovementProjection.w, 1000.0f);
+    float WarpFactor = WarpTail / 1000.0f;
+    vec4 WarpOffset = vec4(ViewPosition.xyz + (MovementProjection.xyz * WarpTail), 1.0f);
 
+    vec4 WarpClip = ViewToClip * WarpOffset;
 
     vec4 ClipPosition = ViewToClip * ViewPosition;
+
+    vec2 WarpDir = (WarpClip.xy / WarpClip.w) - (ClipPosition.xy / ClipPosition.w);
+    float WarpMag = dot(WarpDir, WarpDir);
+    if (WarpMag > 0.0)
+    {
+        WarpDir /= sqrt(WarpMag);
+
+        ClipPosition.xyzw = mix(ClipPosition.xyzw, WarpClip.xyzw, min(dot(LocalVertexOffset.xy, WarpDir), 0.0f));
+    }
     ClipPosition.xyz /= ClipPosition.w;
 
     ClipPosition.xy += LocalVertexOffset.xy * vec2(SplatDiameter * AspectRatio, SplatDiameter);
