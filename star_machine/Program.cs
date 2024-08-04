@@ -40,7 +40,7 @@ public class RenderingConfig
     public double NearPlane = 0.001;
 
     // Start in fullscreen mode.
-    public bool Fullscreen = false;
+    public bool Fullscreen = true;
 
     // Whether to use paraboloids or discs.
     public bool ParaboloidSplats = true;
