@@ -60,6 +60,68 @@ public struct FrameInfo
 }
 
 
+struct JoyStick
+{
+    public double X;
+    public double Y;
+
+    public double Mag;
+    public double Angle;
+    public double DeltaAngle;
+
+    public void Update()
+    {
+        double LastMag = Mag;
+        double LastAngle = Angle;
+
+        X = Double.Clamp(X, -1.0, 1.0);
+        Y = Double.Clamp(Y, -1.0, 1.0);
+        double Mag2 = X * X + Y * Y;
+        if (Mag2 > 0.0)
+        {
+            Mag = Double.Sqrt(Mag2);
+            double InvMag = 1.0 / Mag;
+            Mag = Double.Min(Mag, 1.0);
+
+            // The args of Atan2 are intentionally reversed here to ensure
+            // positive Y is the zero angle point.
+            Angle = Double.Atan2(X * InvMag, Y * InvMag) / Double.Pi;
+        }
+        else
+        {
+            Angle = 0.0;
+            Mag = 0.0;
+        }
+
+        if (LastMag == 0.0)
+        {
+            LastAngle = Angle;
+        }
+
+        {
+            double Trend = DeltaAngle < 0.0 ? -1.0 : 1.0;
+
+            double Dist = Double.Abs(LastAngle - Angle);
+            if (Dist == 0.0)
+            {
+                DeltaAngle = 0.0;
+            }
+            else if (Dist < 1.0)
+            {
+                Trend = (Angle < LastAngle) ? -1.0 : 1.0;
+            }
+            else if (Dist > 1.0)
+            {
+                Trend = (Angle < LastAngle) ? 1.0 : -1.0;
+                Dist = 2.0 - Dist;
+            }
+
+            DeltaAngle = Dist * Trend;
+        }
+    }
+}
+
+
 struct PerformerStatus
 {
     public bool Up;
@@ -68,16 +130,10 @@ struct PerformerStatus
     public bool Right;
 
     public float Turn;
-    public float TurnL;
-    public float TurnR;
 
     public float Clutch;
     public float Brake;
     public float Gas;
-
-    // Left and right stick contributions to the break.
-    public float BrakeL;
-    public float BrakeR;
 
     public bool Paused;
 
@@ -85,22 +141,6 @@ struct PerformerStatus
     public bool Reset;
     public bool HardStop;
     public bool Align;
-
-    public void UpdateTurn()
-    {
-        if (TurnL > TurnR)
-        {
-            Turn = TurnL * TurnL * TurnL * -1.0f;
-        }
-        else if (TurnL < TurnR)
-        {
-            Turn = TurnR * TurnR * TurnR;
-        }
-        else
-        {
-            Turn = 0.0f;
-        }
-    }
 }
 
 
@@ -160,23 +200,6 @@ internal class Program
         }
     }
 
-    static (float, float) ReadPedalValues(Int16 RawValue)
-    {
-        float Value = ReadAxisValue(RawValue) * -1.0f;
-        if (Value > 0.0f)
-        {
-            return (Value, 0.0f);
-        }
-        else if (Value < 0.0f)
-        {
-            return (0.0f, Value);
-        }
-        else
-        {
-            return (0.0f, 0.0f);
-        }
-    }
-
     static void Main(string[] args)
     {
 #if true
@@ -226,6 +249,9 @@ internal class Program
                 GamePad = SDL_OpenGamepad(Joystick);
                 break;
             }
+
+            JoyStick LeftStick = new JoyStick();
+            JoyStick RightStick = new JoyStick();
 
             double IdleRumbleLow = 0.0;
             double IdleRumbleHigh = 100.0;
@@ -332,6 +358,7 @@ internal class Program
                                 break;
                         }
                     }
+#if false
                     else if (Event.type == SDL.SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_DOWN)
                     {
                         switch(Event.gbutton.button)
@@ -374,32 +401,48 @@ internal class Program
                                 break;
                         }
                     }
-                    if (Event.type == SDL.SDL_EventType.SDL_EVENT_GAMEPAD_AXIS_MOTION)
+#endif
+                    else if (Event.type == SDL.SDL_EventType.SDL_EVENT_GAMEPAD_AXIS_MOTION)
                     {
                         switch(Event.gaxis.axis)
                         {
-                            case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY:
-                                (PlayerState.Clutch, PlayerState.BrakeL) = ReadPedalValues(Event.gaxis.value);
-                                PlayerState.Brake = Math.Abs(Math.Min(PlayerState.BrakeL, PlayerState.BrakeR));
-                                break;
-
-                            case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHTY:
-                                (PlayerState.Gas, PlayerState.BrakeR) = ReadPedalValues(Event.gaxis.value);
-                                PlayerState.Brake = Math.Abs(Math.Min(PlayerState.BrakeL, PlayerState.BrakeR));
-                                break;
-
                             case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFT_TRIGGER:
-                                PlayerState.TurnL = ReadAxisValue(Event.gaxis.value);
-                                PlayerState.UpdateTurn();
+                                PlayerState.Brake = ReadAxisValue(Event.gaxis.value);
                                 break;
 
                             case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHT_TRIGGER:
-                                PlayerState.TurnR = ReadAxisValue(Event.gaxis.value);
-                                PlayerState.UpdateTurn();
+                                PlayerState.Gas = ReadAxisValue(Event.gaxis.value);
                                 break;
 
+                            case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTX:
+                                // left to right is -1 to 1
+                                LeftStick.X = ReadAxisValue(Event.gaxis.value);
+                                break;
+
+                            case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY:
+                                // up to down is normally -1 to 1
+                                LeftStick.Y = -ReadAxisValue(Event.gaxis.value);
+                                break;
+
+                            case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHTX:
+                                // left to right is -1 to 1
+                                RightStick.X = ReadAxisValue(Event.gaxis.value);
+                                break;
+
+                            case SDL.SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHTY:
+                                // up to down is normally -1 to 1
+                                RightStick.Y = -ReadAxisValue(Event.gaxis.value);
+                                break;
                         }
                     }
+                }
+
+                LeftStick.Update();
+                RightStick.Update();
+
+                if (GamePad != 0)
+                {
+                    PlayerState.Turn = (float)(LeftStick.Angle * LeftStick.Mag);
                 }
 
 #if false
