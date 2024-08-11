@@ -2725,11 +2725,25 @@ namespace SDL3
          *
          * \since This function is available since SDL 3.x.x
          */
-        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe void SDL_GpuSetBufferName(
+        [DllImport(nativeLibName, EntryPoint = "SDL_GpuSetBufferName", CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void Inner_SDL_GpuSetBufferName(
             SDL_GpuDevice_Ptr device,
             SDL_GpuBuffer_Ptr buffer,
-            /*const*/ char* text);
+            /*const char*/ byte* text);
+
+        public static void SDL_GpuSetBufferName(
+            SDL_GpuDevice_Ptr device,
+            SDL_GpuBuffer_Ptr buffer,
+            ReadOnlySpan<byte> text)
+        {
+            unsafe
+            {
+                fixed (byte* textPtr = text)
+                {
+                    Inner_SDL_GpuSetBufferName(device, buffer, textPtr);
+                }
+            }
+        }
 
         /**
          * Sets an arbitrary string constant to label a texture. Useful for debugging.
@@ -2740,11 +2754,25 @@ namespace SDL3
          *
          * \since This function is available since SDL 3.x.x
          */
-        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe void SDL_GpuSetTextureName(
+        [DllImport(nativeLibName, EntryPoint = "SDL_GpuSetTextureName", CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void Inner_SDL_GpuSetTextureName(
             SDL_GpuDevice_Ptr device,
             SDL_GpuTexture_Ptr texture,
-            /*const*/ char* text);
+            /*const char*/ byte* text);
+
+        public static void SDL_GpuSetTextureName(
+            SDL_GpuDevice_Ptr device,
+            SDL_GpuTexture_Ptr texture,
+            ReadOnlySpan<byte> text)
+        {
+            unsafe
+            {
+                fixed (byte* textPtr = text)
+                {
+                    Inner_SDL_GpuSetTextureName(device, texture, textPtr);
+                }
+            }
+        }
 
         /**
          * Inserts an arbitrary string label into the command buffer callstream.
@@ -2755,10 +2783,23 @@ namespace SDL3
          *
          * \since This function is available since SDL 3.x.x
          */
-        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe void SDL_GpuInsertDebugLabel(
+        [DllImport(nativeLibName, EntryPoint = "SDL_GpuInsertDebugLabel", CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void Inner_SDL_GpuInsertDebugLabel(
             SDL_GpuCommandBuffer_Ptr commandBuffer,
-            /*const*/ char* text);
+            /*const char*/ byte* text);
+
+        public static void Inner_SDL_GpuInsertDebugLabel(
+            SDL_GpuCommandBuffer_Ptr commandBuffer,
+            ReadOnlySpan<byte> text)
+        {
+            unsafe
+            {
+                fixed (byte* textPtr = text)
+                {
+                    Inner_SDL_GpuInsertDebugLabel(commandBuffer, textPtr);
+                }
+            }
+        }
 
         /**
          * Begins a debug group with an arbitary name.
@@ -2778,10 +2819,23 @@ namespace SDL3
          *
          * \sa SDL_GpuPopDebugGroup
          */
-        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe void SDL_GpuPushDebugGroup(
+        [DllImport(nativeLibName, EntryPoint = "SDL_GpuPushDebugGroup", CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void Inner_SDL_GpuPushDebugGroup(
             SDL_GpuCommandBuffer_Ptr commandBuffer,
-            /*const*/ char* name);
+            /*const char*/ byte* name);
+
+        public static void SDL_GpuPushDebugGroup(
+            SDL_GpuCommandBuffer_Ptr commandBuffer,
+            ReadOnlySpan<byte> name)
+        {
+            unsafe
+            {
+                fixed (byte* namePtr = name)
+                {
+                    Inner_SDL_GpuPushDebugGroup(commandBuffer, namePtr);
+                }
+            }
+        }
 
         /**
          * Ends the most-recently pushed debug group.

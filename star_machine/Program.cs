@@ -141,6 +141,7 @@ struct PerformerStatus
     public bool Reset;
     public bool HardStop;
     public bool Align;
+    public bool Clear;
 }
 
 
@@ -314,6 +315,10 @@ internal class Program
                                 PlayerState.Align = true;
                                 break;
 
+                            case SDL.SDL_Scancode.SDL_SCANCODE_C:
+                                PlayerState.Clear = true;
+                                break;
+
                             case SDL.SDL_Scancode.SDL_SCANCODE_W:
                                 Console.WriteLine($"Current position: {HighRenderer.Eye}");
                                 break;
@@ -325,7 +330,7 @@ internal class Program
                     }
                     else if (Event.type == SDL.SDL_EventType.SDL_EVENT_KEY_UP)
                     {
-                        switch(Event.key.scancode)
+                        switch (Event.key.scancode)
                         {
                             case SDL.SDL_Scancode.SDL_SCANCODE_UP:
                                 PlayerState.Up = false;
@@ -355,6 +360,10 @@ internal class Program
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_A:
                                 PlayerState.Align = false;
+                                break;
+
+                            case SDL.SDL_Scancode.SDL_SCANCODE_C:
+                                PlayerState.Clear = false;
                                 break;
                         }
                     }
@@ -522,7 +531,7 @@ internal class Program
 
                     Game.Advance(ThisFrame, PlayerState);
                     HighRenderer.Advance(ThisFrame, PlayerState, Game);
-                    Halt = LowRenderer.Advance(ThisFrame, Settings, HighRenderer);
+                    Halt = LowRenderer.Advance(ThisFrame, Settings, PlayerState.Clear, HighRenderer);
 
                     LastFrame = ThisFrame;
                     ThisFrame.Number++;
