@@ -1,4 +1,5 @@
 
+using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -266,16 +267,17 @@ class LowLevelRenderer
         {
             const int DebugMode = 1;
             const int PreferLowPower = 0;
-            var Backends = new ulong[]
+            var Drivers = new string[]
             {
                 // usubBorrow does not seem to be available in D3D11 :(
-                //(ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_D3D11,
-                //(ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_METAL,
-                (ulong)SDL.SDL_GpuBackendBits.SDL_GPU_BACKEND_VULKAN,
+                "vulkan",
             };
-            foreach (ulong BackendFlag in Backends)
+            foreach (string Driver in Drivers)
             {
-                Device = SDL_GpuCreateDevice(BackendFlag, DebugMode, PreferLowPower);
+                uint GlobalProperties = SDL_GetGlobalProperties();
+                SDL_SetStringProperty(GlobalProperties, SDL.SDL_PROP_GPU_CREATEDEVICE_NAME_STRING, Encoding.UTF8.GetBytes(Driver));
+
+                Device = SDL_GpuCreateDevice(DebugMode, PreferLowPower, GlobalProperties);
                 if (Device != IntPtr.Zero)
                 {
                     break;
@@ -665,7 +667,7 @@ class LowLevelRenderer
                 Viewport.maxDepth = 1.0f;
             }
 
-            SDL_GpuRect ScissorRect;
+            SDL_Rect ScissorRect;
             {
                 ScissorRect.x = 0;
                 ScissorRect.y = 0;
@@ -709,7 +711,7 @@ class LowLevelRenderer
                         }
                         SDL_GpuBindIndexBuffer(
                             RenderPass, &IndexBufferBinding, SDL_GpuIndexElementSize.SDL_GPU_INDEXELEMENTSIZE_16BIT);
-                        SDL_GpuDrawIndexedPrimitives(RenderPass, 0, 0, SplatMesh.TriangleCount, HighRenderer.LiveSurfels);
+                        SDL_GpuDrawIndexedPrimitives(RenderPass, 0, 0, SplatMesh.TriangleCount * 3, HighRenderer.LiveSurfels);
                     }
                 }
                 SDL_GpuEndRenderPass(RenderPass);

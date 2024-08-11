@@ -36,6 +36,8 @@ using SDL_GpuRenderPass_Ptr = System.IntPtr;
 using SDL_GpuComputePass_Ptr = System.IntPtr;
 using SDL_GpuCopyPass_Ptr = System.IntPtr;
 using SDL_GpuFence_Ptr = System.IntPtr;
+using SDL_PropertiesID = System.UInt32;
+using System.Runtime.CompilerServices;
 
 namespace SDL3
 {
@@ -56,6 +58,69 @@ namespace SDL3
 
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern int SDL_Init(uint flags);
+        #endregion
+
+        #region SDL_properties.h
+        /**
+         * SDL property type
+         *
+         * \since This enum is available since SDL 3.0.0.
+         */
+        public enum SDL_PropertyType
+        {
+            SDL_PROPERTY_TYPE_INVALID,
+            SDL_PROPERTY_TYPE_POINTER,
+            SDL_PROPERTY_TYPE_STRING,
+            SDL_PROPERTY_TYPE_NUMBER,
+            SDL_PROPERTY_TYPE_FLOAT,
+            SDL_PROPERTY_TYPE_BOOLEAN
+        }
+
+        /**
+         * Get the global SDL properties.
+         *
+         * \returns a valid property ID on success or 0 on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern SDL_PropertiesID SDL_GetGlobalProperties();
+
+        /**
+         * Set a string property in a group of properties.
+         *
+         * This function makes a copy of the string; the caller does not have to
+         * preserve the data after this call completes.
+         *
+         * \param props the properties to modify.
+         * \param name the name of the property to modify.
+         * \param value the new value of the property, or NULL to delete the property.
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \threadsafety It is safe to call this function from any thread.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_GetStringProperty
+         */
+        [DllImport(nativeLibName, EntryPoint= "SDL_SetStringProperty", CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe int Inner_SDL_SetStringProperty(SDL_PropertiesID props, byte* name, byte* value);
+
+        public static int SDL_SetStringProperty(SDL_PropertiesID props, ReadOnlySpan<byte> name, ReadOnlySpan<byte> value)
+        {
+            unsafe
+            {
+                fixed (byte* namePtr = name)
+                {
+                    fixed (byte* valuePtr = value)
+                    {
+                        return Inner_SDL_SetStringProperty(props, namePtr, valuePtr);
+                    }
+                }
+            }
+        }
         #endregion
 
         #region SDL_scancode.h
@@ -1593,6 +1658,43 @@ namespace SDL3
         }
         #endregion
 
+        #region SDL_pixels.h
+        /**
+         * The bits of this structure can be directly reinterpreted as a float-packed
+         * color which uses the SDL_PIXELFORMAT_RGBA128_FLOAT format
+         *
+         * \since This struct is available since SDL 3.0.0.
+         */
+        public struct SDL_FColor
+        {
+            public float r;
+            public float g;
+            public float b;
+            public float a;
+        }
+        #endregion
+
+        #region SDL_rect.h
+        /**
+         * A rectangle, with the origin at the upper left (using integers).
+         *
+         * \since This struct is available since SDL 3.0.0.
+         *
+         * \sa SDL_RectEmpty
+         * \sa SDL_RectsEqual
+         * \sa SDL_HasRectIntersection
+         * \sa SDL_GetRectIntersection
+         * \sa SDL_GetRectAndLineIntersection
+         * \sa SDL_GetRectUnion
+         * \sa SDL_GetRectEnclosingPoints
+         */
+        public struct SDL_Rect
+        {
+            public int x, y;
+            public int w, h;
+        }
+        #endregion
+
         #region SDL_gpu.h
         /*
           Simple DirectMedia Layer
@@ -1779,13 +1881,12 @@ namespace SDL3
         public enum SDL_GpuShaderFormat
         {
             SDL_GPU_SHADERFORMAT_INVALID,
+            SDL_GPU_SHADERFORMAT_SECRET,   /* NDA'd platforms */
             SDL_GPU_SHADERFORMAT_SPIRV,    /* Vulkan */
-            SDL_GPU_SHADERFORMAT_HLSL,     /* D3D11, D3D12 */
             SDL_GPU_SHADERFORMAT_DXBC,     /* D3D11, D3D12 */
             SDL_GPU_SHADERFORMAT_DXIL,     /* D3D12 */
             SDL_GPU_SHADERFORMAT_MSL,      /* Metal */
             SDL_GPU_SHADERFORMAT_METALLIB, /* Metal */
-            SDL_GPU_SHADERFORMAT_SECRET    /* NDA'd platforms */
         }
 
         public enum SDL_GpuVertexElementFormat
@@ -1948,13 +2049,14 @@ namespace SDL3
             SDL_GPU_SWAPCHAINCOMPOSITION_HDR10_ST2048
         }
 
-        public enum SDL_GpuBackendBits : UInt64
+        public enum SDL_GpuDriver : Int32
         {
-            SDL_GPU_BACKEND_INVALID = 0,
-            SDL_GPU_BACKEND_VULKAN = 0x0000000000000001,
-            SDL_GPU_BACKEND_D3D11 = 0x0000000000000002,
-            SDL_GPU_BACKEND_METAL = 0x0000000000000004,
-            SDL_GPU_BACKEND_ALL = (SDL_GPU_BACKEND_VULKAN | SDL_GPU_BACKEND_D3D11 | SDL_GPU_BACKEND_METAL)
+            SDL_GPU_DRIVER_INVALID = -1,
+            SDL_GPU_DRIVER_SECRET,
+            SDL_GPU_DRIVER_VULKAN,
+            SDL_GPU_DRIVER_D3D11,
+            SDL_GPU_DRIVER_D3D12,
+            SDL_GPU_DRIVER_METAL
         }
 
 
@@ -1964,22 +2066,6 @@ namespace SDL3
         {
             public float depth;
             public UInt32 stencil;
-        }
-
-        public struct SDL_GpuRect
-        {
-            public Int32 x;
-            public Int32 y;
-            public Int32 w;
-            public Int32 h;
-        }
-
-        public struct SDL_GpuColor
-        {
-            public float r;
-            public float g;
-            public float b;
-            public float a;
         }
 
         public struct SDL_GpuViewport
@@ -2004,13 +2090,6 @@ namespace SDL3
         {
             public SDL_GpuTransferBuffer_Ptr transferBuffer;
             public UInt32 offset;
-        }
-
-        public struct SDL_GpuTransferBufferRegion
-        {
-            public SDL_GpuTransferBuffer_Ptr transferBuffer;
-            public UInt32 offset;
-            public UInt32 size;
         }
 
         public struct SDL_GpuTextureSlice
@@ -2067,6 +2146,13 @@ namespace SDL3
             public UInt32 firstIndex;    /* base index within the index buffer */
             public UInt32 vertexOffset;  /* value added to vertex index before indexing into the vertex buffer */
             public UInt32 firstInstance; /* ID of the first instance to draw */
+        }
+
+        public struct SDL_GpuIndirectDispatchCommand
+        {
+            public UInt32 groupCountX;
+            public UInt32 groupCountY;
+            public UInt32 groupCountZ;
         }
 
 /* State structures */
@@ -2173,7 +2259,7 @@ namespace SDL3
 
         public struct SDL_GpuMultisampleState
         {
-            public SDL_GpuSampleCount multisampleCount;
+            public SDL_GpuSampleCount sampleCount;
             public UInt32 sampleMask;
         }
 
@@ -2239,7 +2325,7 @@ namespace SDL3
             public SDL_GpuTextureSlice textureSlice;
 
             /* Can be ignored by RenderPass if CLEAR is not used */
-            public SDL_GpuColor clearColor;
+            public SDL_FColor clearColor;
 
             /* Determines what is done with the texture slice at the beginning of the render pass.
              *
@@ -2369,25 +2455,31 @@ namespace SDL3
         /**
          * Creates a GPU context.
          *
-         * Backends will first be checked for availability in order of bitflags passed using preferredBackends. If none of the backends are available, the remaining backends are checked as fallback renderers.
+         * These are the supported properties:
          *
-         * Think of "preferred" backends as those that have pre-built shaders readily available - for example, you would set the SDL_GPU_BACKEND_VULKAN bit if your game includes SPIR-V shaders. If you generate shaders at runtime (i.e. via SDL_shader) and the library does _not_ provide you with a preferredBackends value, you should pass SDL_GPU_BACKEND_ALL so that updated versions of SDL can be aware of which backends the application was aware of at compile time. SDL_GPU_BACKEND_INVALID is an accepted value but is not recommended.
+         * - `SDL_PROP_GPU_CREATEDEVICE_NAME_STRING`: the name of the GPU driver to use, if a specific one is desired
          *
-         * \param preferredBackends a bitflag containing the renderers most recognized by the application
+         * With the D3D12 renderer:
+         * - `SDL_PROP_GPU_CREATEDEVICE_D3D12_SEMANTIC_NAME_STRING`: the prefix to use for all vertex semantics, default is "TEXCOORD"
+         *
          * \param debugMode enable debug mode properties and validations
          * \param preferLowPower set this to SDL_TRUE if your app prefers energy efficiency over maximum GPU performance
+         * \param props the properties to use.
          * \returns a GPU context on success or NULL on failure
          *
          * \since This function is available since SDL 3.x.x
          *
-         * \sa SDL_GpuSelectBackend
+         * \sa SDL_GpuGetDriver
          * \sa SDL_GpuDestroyDevice
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern SDL_GpuDevice_Ptr SDL_GpuCreateDevice(
-            SDL_GpuBackend preferredBackends,
             SDL_bool debugMode,
-            SDL_bool preferLowPower);
+            SDL_bool preferLowPower,
+            SDL_PropertiesID props);
+
+        public static ReadOnlySpan<Byte> SDL_PROP_GPU_CREATEDEVICE_NAME_STRING => "name"u8;
+        public static ReadOnlySpan<Byte> SDL_PROP_GPU_CREATEDEVICE_D3D12_SEMANTIC_NAME_STRING => "d3d12.semantic"u8;
 
         /**
          * Destroys a GPU context previously returned by SDL_GpuCreateDevice.
@@ -2405,11 +2497,9 @@ namespace SDL3
          * Returns the backend used to create this GPU context.
          *
          * \param device a GPU context to query
-         * \returns an SDL_GpuBackend value, or SDL_GPU_BACKEND_INVALID on error
+         * \returns an SDL_GpuDriver value, or SDL_GPU_DRIVER_INVALID on error
          *
          * \since This function is available since SDL 3.x.x
-         *
-         * \sa SDL_GpuSelectBackend
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern SDL_GpuBackend SDL_GpuGetBackend(SDL_GpuDevice_Ptr device);
@@ -2544,6 +2634,14 @@ namespace SDL3
          * If you request a sample count higher than the hardware supports,
          * the implementation will automatically fall back to the highest available sample count.
          *
+         * For depth textures, the hardware support matrix looks as follows:
+         * - D16_UNORM is guaranteed to always be supported.
+         * - It's guaranteed that either D24_UNORM or D32_SFLOAT will be supported.
+         * - It's guaranteed that either D24_UNORM_S8_UINT or D32_SFLOAT_S8_UINT will be supported.
+         * Therefore, unless D16 is sufficient for your purposes, you should always call
+         * SDL_GpuSupportsTextureFormat to determine which of D24/D32 are supported by the GPU
+         * before creating a depth texture.
+         *
          * \param device a GPU Context
          * \param textureCreateInfo a struct describing the state of the texture to create
          * \returns a texture object on success, or NULL on failure
@@ -2559,6 +2657,7 @@ namespace SDL3
          * \sa SDL_GpuBindComputeStorageTextures
          * \sa SDL_GpuBlit
          * \sa SDL_GpuReleaseTexture
+         * \sa SDL_GpuSupportsTextureFormat
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe SDL_GpuTexture_Ptr SDL_GpuCreateTexture(
@@ -2921,8 +3020,9 @@ namespace SDL3
          * or if none are available, a new one is created.
          * This means you don't have to worry about complex state tracking and synchronization as long as cycling is correctly employed.
          *
-         * For example: you can call SetTransferData and then UploadToTexture. The next time you call SetTransferData,
-         * if you set the cycle param to SDL_TRUE, you don't have to worry about overwriting any data that is not yet uploaded.
+         * For example: you can call MapTransferBuffer, write texture data, UnmapTransferBuffer, and then UploadToTexture.
+         * The next time you write texture data to the transfer buffer, if you set the cycle param to SDL_TRUE, you don't have
+         * to worry about overwriting any data that is not yet uploaded.
          *
          * Another example: If you are using a texture in a render pass every frame, this can cause a data dependency between frames.
          * If you set cycle to SDL_TRUE in the ColorAttachmentInfo struct, you can prevent this data dependency.
@@ -3006,7 +3106,7 @@ namespace SDL3
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe void SDL_GpuSetScissor(
             SDL_GpuRenderPass_Ptr renderPass,
-            SDL_GpuRect* scissor);
+            SDL_Rect* scissor);
 
         /**
          * Binds vertex buffers on a command buffer for use with subsequent draw calls.
@@ -3157,7 +3257,7 @@ namespace SDL3
          * \param renderPass a render pass handle
          * \param baseVertex the starting offset to read from the vertex buffer
          * \param startIndex the starting offset to read from the index buffer
-         * \param primitiveCount the number of primitives to draw
+         * \param vertexCount the number of vertices to draw
          * \param instanceCount the number of instances that will be drawn
          *
          * \since This function is available since SDL 3.x.x
@@ -3167,7 +3267,7 @@ namespace SDL3
             SDL_GpuRenderPass_Ptr renderPass,
             UInt32 baseVertex,
             UInt32 startIndex,
-            UInt32 primitiveCount,
+            UInt32 vertexCount,
             UInt32 instanceCount);
 
         /**
@@ -3176,7 +3276,7 @@ namespace SDL3
          *
          * \param renderPass a render pass handle
          * \param vertexStart The starting offset to read from the vertex buffer
-         * \param primitiveCount The number of primitives to draw
+         * \param vertexCount The number of vertices to draw
          *
          * \since This function is available since SDL 3.x.x
          */
@@ -3184,7 +3284,7 @@ namespace SDL3
         public static extern void SDL_GpuDrawPrimitives(
             SDL_GpuRenderPass_Ptr renderPass,
             UInt32 vertexStart,
-            UInt32 primitiveCount);
+            UInt32 vertexCount);
 
         /**
          * Draws data using bound graphics state and with draw parameters set from a buffer.
@@ -3348,6 +3448,30 @@ namespace SDL3
             UInt32 groupCountZ);
 
         /**
+         * Dispatches compute work with parameters set from a buffer.
+         * The buffer layout should match the layout of SDL_GpuIndirectDispatchCommand.
+         * You must not call this function before binding a compute pipeline.
+         *
+         * A VERY IMPORTANT NOTE
+         * If you dispatch multiple times in a compute pass,
+         * and the dispatches write to the same resource region as each other,
+         * there is no guarantee of which order the writes will occur.
+         * If the write order matters, you MUST end the compute pass and begin another one.
+         *
+         * \param computePass a compute pass handle
+         * \param buffer a buffer containing dispatch parameters
+         * \param offsetInBytes the offset to start reading from the dispatch buffer
+         *
+         * \since This function is available since SDL 3.x.x
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SDL_GpuDispatchComputeIndirect(
+            SDL_GpuComputePass_Ptr computePass,
+            SDL_GpuBuffer_Ptr buffer,
+            UInt32 offsetInBytes
+        );
+
+        /**
          * Ends the current compute pass.
          * All bound compute state on the command buffer is unset.
          * The compute pass handle is now invalid.
@@ -3392,38 +3516,6 @@ namespace SDL3
         public static extern void SDL_GpuUnmapTransferBuffer(
             SDL_GpuDevice_Ptr device,
             SDL_GpuTransferBuffer_Ptr transferBuffer);
-
-        /**
-         * Immediately copies data from a pointer to a transfer buffer.
-         *
-         * \param device a GPU context
-         * \param source a pointer to data to copy into the transfer buffer
-         * \param destination a transfer buffer with offset and size
-         * \param cycle if SDL_TRUE, cycles the transfer buffer if it is bound, otherwise overwrites the data.
-         *
-         * \since This function is available since SDL 3.x.x
-         */
-        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe void SDL_GpuSetTransferData(
-            SDL_GpuDevice_Ptr device,
-            /*const*/ void* source,
-            SDL_GpuTransferBufferRegion *destination,
-            SDL_bool cycle);
-
-        /**
-         * Immediately copies data from a transfer buffer to a pointer.
-         *
-         * \param device a GPU context
-         * \param source a transfer buffer with offset and size
-         * \param destination a data pointer
-         *
-         * \since This function is available since SDL 3.x.x
-         */
-        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern unsafe void SDL_GpuGetTransferData(
-            SDL_GpuDevice_Ptr device,
-            SDL_GpuTransferBufferRegion* source,
-            void* destination);
 
         /* Copy Pass */
 
@@ -3889,7 +3981,6 @@ namespace SDL3
          *
          * \since This function is available since SDL 3.x.x
          *
-         * \sa SDL_GpuSetTransferData
          * \sa SDL_GpuUploadToTexture
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
@@ -3908,7 +3999,7 @@ namespace SDL3
          * \since This function is available since SDL 3.x.x
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-        public static extern SDL_bool SDL_GpuIsTextureFormatSupported(
+        public static extern SDL_bool SDL_GpuSupportsTextureFormat(
             SDL_GpuDevice_Ptr device,
             SDL_GpuTextureFormat format,
             SDL_GpuTextureType type,
