@@ -212,8 +212,6 @@ internal class Program
 #if true
         {
             FixedPointTests.PreflightCheck();
-            Font Michroma = new("Michroma-Regular.ttf");
-
         }
 #endif
 
@@ -230,6 +228,9 @@ internal class Program
             Console.WriteLine($"PlutoVG {plutovg_version_string()}");
             Console.WriteLine($"PlutoSVG {plutosvg_version_string()}");
         }
+
+        FontResource Michroma = new("Michroma-Regular.ttf");
+        SVGResource Camera = new("Digital_Camera.svg");
 
         var SplatMesh = new SplatGenerator(Settings);
         var LowRenderer = new LowLevelRenderer(SplatMesh);

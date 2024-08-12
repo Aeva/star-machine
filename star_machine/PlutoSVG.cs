@@ -98,7 +98,7 @@ public static class PlutoSVG
      * @return Pointer to the loaded `plutosvg_document_t` structure, or NULL if loading fails.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe plutosvg_document_t* plutosvg_document_load_from_data(/*const*/ char* data, int length, float width, float height,
+    public static extern unsafe plutosvg_document_t* plutosvg_document_load_from_data(/*const*/ void* data, int length, float width, float height,
                                                                        plutovg_destroy_func_t destroy_func, void* closure);
 
     /**
