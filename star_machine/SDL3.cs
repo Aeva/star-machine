@@ -4,10 +4,7 @@
 //  - https://github.com/flibitijibibo/SDL2-CS/
 //  - https://github.com/thatcosmonaut/SDL/tree/gpu/include/SDL3
 
-using System;
-using System.Data.SqlTypes;
 using System.Runtime.InteropServices;
-using System.Text;
 
 using SDL_bool = int;
 using size_t = nint;
@@ -37,7 +34,7 @@ using SDL_GpuComputePass_Ptr = System.IntPtr;
 using SDL_GpuCopyPass_Ptr = System.IntPtr;
 using SDL_GpuFence_Ptr = System.IntPtr;
 using SDL_PropertiesID = System.UInt32;
-using System.Runtime.CompilerServices;
+
 
 namespace SDL3
 {
