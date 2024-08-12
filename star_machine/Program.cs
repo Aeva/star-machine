@@ -212,6 +212,8 @@ internal class Program
 #if true
         {
             FixedPointTests.PreflightCheck();
+            Font Michroma = new("Michroma-Regular.ttf");
+
         }
 #endif
 

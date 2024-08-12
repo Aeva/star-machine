@@ -16,7 +16,6 @@ using static SDL3.SDL;
 using FixedInt = FixedPoint.FixedInt;
 using Fixie = FixedPoint.Fixie;
 
-
 namespace StarMachine;
 
 
@@ -102,19 +101,7 @@ class LowLevelRenderer
         uint StorageBufferCount,
         uint StorageTextureCount)
     {
-        byte[] ShaderBlob;
-        using (Stream? ResourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("StarMachine." + Path))
-        {
-            if (ResourceStream != null)
-            {
-                ShaderBlob = new byte[ResourceStream.Length];
-                ResourceStream.Read(ShaderBlob, 0, (int)ResourceStream.Length);
-            }
-            else
-            {
-                return IntPtr.Zero;
-            }
-        }
+        byte[] ShaderBlob = Resources.FindAndRead(Path);
 
         unsafe
         {

@@ -64,7 +64,7 @@ public static class PlutoVG
      */
     //typedef void (*plutovg_destroy_func_t)(void* closure);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    public unsafe delegate void plutovg_destroy_func_t(void* closure);
+    public delegate void plutovg_destroy_func_t(IntPtr closure);
 
     /**
      * @brief A function pointer type for a write callback.

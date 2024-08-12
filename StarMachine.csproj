@@ -27,6 +27,7 @@
   <ItemGroup>
     <EmbeddedResource Include="*.spirv" />
     <EmbeddedResource Include="star_machine.bmp" />
+    <EmbeddedResource Include="third_party/*/*.ttf" />
   </ItemGroup>
 
 </Project>
