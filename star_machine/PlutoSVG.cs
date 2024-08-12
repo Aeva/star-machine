@@ -27,8 +27,10 @@
 
 using System.Runtime.InteropServices;
 
+using plutovg_destroy_func_t = PlutoVG.PlutoVG.plutovg_destroy_func_t;
 using plutovg_color_t = PlutoVG.PlutoVG.plutovg_color_t;
 using plutovg_canvas_t = PlutoVG.PlutoVG.plutovg_canvas_t;
+using plutovg_surface_t = PlutoVG.PlutoVG.plutovg_surface_t;
 using plutovg_rect_t = PlutoVG.PlutoVG.plutovg_rect_t;
 
 namespace PlutoSVG;
@@ -69,7 +71,6 @@ public static class PlutoSVG
 
     }
 
-#if false // TODO
     /**
      * @brief Callback type for resolving CSS color variables in SVG documents.
      *
@@ -79,7 +80,9 @@ public static class PlutoSVG
      * @param color Pointer to `plutovg_color_t` where the resolved color will be stored.
      * @return `true` if the color variable was successfully resolved; `false` otherwise.
      */
-    typedef bool(*plutosvg_palette_func_t)(void* closure, const char* name, int length, plutovg_color_t* color);
+    //typedef bool(*plutosvg_palette_func_t)(void* closure, const char* name, int length, plutovg_color_t* color);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public unsafe delegate bool plutosvg_palette_func_t(void* closure, /*const*/ byte* name, int length, plutovg_color_t* color);
 
     /**
      * @brief Loads an SVG document from a data buffer.
@@ -97,7 +100,6 @@ public static class PlutoSVG
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe plutosvg_document_t* plutosvg_document_load_from_data(/*const*/ char* data, int length, float width, float height,
                                                                        plutovg_destroy_func_t destroy_func, void* closure);
-#endif
 
     /**
      * @brief Loads an SVG document from a file.
@@ -110,7 +112,6 @@ public static class PlutoSVG
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe plutosvg_document_t* plutosvg_document_load_from_file(/*const*/ char* filename, float width, float height);
 
-#if false // TODO
     /**
      * @brief Renders an SVG document or a specific element onto a canvas.
      *
@@ -141,7 +142,6 @@ public static class PlutoSVG
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe plutovg_surface_t* plutosvg_document_render_to_surface(/*const*/ plutosvg_document_t* document, /*const*/ char* id, int width, int height,
                                                                         /*const*/ plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure);
-#endif
 
     /**
      * @brief Returns the intrinsic width of the SVG document.

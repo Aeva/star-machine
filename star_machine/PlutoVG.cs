@@ -58,12 +58,13 @@ public static class PlutoVG
         return $"{Major}.{Minor}.{Micro}";
     }
 
-#if false // TODO
     /**
      * @brief A function pointer type for a cleanup callback.
      * @param closure A pointer to the resource to be cleaned up.
      */
-    typedef void (*plutovg_destroy_func_t)(void* closure);
+    //typedef void (*plutovg_destroy_func_t)(void* closure);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public unsafe delegate void plutovg_destroy_func_t(void* closure);
 
     /**
      * @brief A function pointer type for a write callback.
@@ -71,8 +72,9 @@ public static class PlutoVG
      * @param data A pointer to the data to be written.
      * @param size The size of the data in bytes.
      */
-    typedef void (*plutovg_write_func_t)(void* closure, void* data, int size);
-#endif
+    //typedef void (*plutovg_write_func_t)(void* closure, void* data, int size);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public unsafe delegate void plutovg_write_func_t(void* closure, void* data, int size);
 
     /**
      * @brief A structure representing a point in 2D space.
@@ -369,7 +371,6 @@ public static class PlutoVG
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe bool plutovg_path_iterator_has_next(/*const*/ plutovg_path_iterator_t* it);
 
-#if false // TODO
     /**
      * @brief Retrieves the current command and its associated points, then advances the iterator.
      *
@@ -378,8 +379,7 @@ public static class PlutoVG
      * @return The path command for the current element.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe plutovg_path_command_t plutovg_path_iterator_next(plutovg_path_iterator_t* it, plutovg_point_t points[3]);
-#endif
+    public static extern unsafe plutovg_path_command_t plutovg_path_iterator_next(plutovg_path_iterator_t* it, plutovg_point_t[/*3*/] point);
 
     /**
      * @brief Creates a new path object.
@@ -521,7 +521,7 @@ public static class PlutoVG
      * @param path A pointer to a `plutovg_path_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_close(plutovg_path_t* path);
+    public static extern unsafe void plutovg_path_close(plutovg_path_t* path);
 
     /**
      * @brief Retrieves the current point of the path.
@@ -534,7 +534,7 @@ public static class PlutoVG
      * @param y The y-coordinate of the current point.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_get_current_point(/*const*/ plutovg_path_t* path, float* x, float* y);
+    public static extern unsafe void plutovg_path_get_current_point(/*const*/ plutovg_path_t* path, float* x, float* y);
 
     /**
      * @brief Reserves space for path elements.
@@ -546,7 +546,7 @@ public static class PlutoVG
      * @param count The number of path elements to reserve space for.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_reserve(plutovg_path_t* path, int count);
+    public static extern unsafe void plutovg_path_reserve(plutovg_path_t* path, int count);
 
     /**
      * @brief Resets the path.
@@ -556,7 +556,7 @@ public static class PlutoVG
      * @param path A pointer to a `plutovg_path_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_reset(plutovg_path_t* path);
+    public static extern unsafe void plutovg_path_reset(plutovg_path_t* path);
 
     /**
      * @brief Adds a rectangle to the path.
@@ -570,7 +570,7 @@ public static class PlutoVG
      * @param h The height of the rectangle.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_add_rect(plutovg_path_t* path, float x, float y, float w, float h);
+    public static extern unsafe void plutovg_path_add_rect(plutovg_path_t* path, float x, float y, float w, float h);
 
     /**
      * @brief Adds a rounded rectangle to the path.
@@ -587,7 +587,7 @@ public static class PlutoVG
      * @param ry The y-radius of the rectangle's corners.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_add_round_rect(plutovg_path_t* path, float x, float y, float w, float h, float rx, float ry);
+    public static extern unsafe void plutovg_path_add_round_rect(plutovg_path_t* path, float x, float y, float w, float h, float rx, float ry);
 
     /**
      * @brief Adds an ellipse to the path.
@@ -601,7 +601,7 @@ public static class PlutoVG
      * @param ry The y-radius of the ellipse.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_add_ellipse(plutovg_path_t* path, float cx, float cy, float rx, float ry);
+    public static extern unsafe void plutovg_path_add_ellipse(plutovg_path_t* path, float cx, float cy, float rx, float ry);
 
     /**
      * @brief Adds a circle to the path.
@@ -614,7 +614,7 @@ public static class PlutoVG
      * @param r The radius of the circle.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_add_circle(plutovg_path_t* path, float cx, float cy, float r);
+    public static extern unsafe void plutovg_path_add_circle(plutovg_path_t* path, float cx, float cy, float r);
 
     /**
      * @brief Adds an arc to the path.
@@ -631,7 +631,7 @@ public static class PlutoVG
      * @param ccw If true, the arc is drawn counter-clockwise; if false, clockwise.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_add_arc(plutovg_path_t* path, float cx, float cy, float r, float a0, float a1, bool ccw);
+    public static extern unsafe void plutovg_path_add_arc(plutovg_path_t* path, float cx, float cy, float r, float a0, float a1, bool ccw);
 
     /**
      * @brief Adds a sub-path to the path.
@@ -644,7 +644,7 @@ public static class PlutoVG
      * @param matrix A pointer to a `plutovg_matrix_t` object, or `NULL` to apply no transformation.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_add_path(plutovg_path_t* path, /*const*/ plutovg_path_t* source, /*const*/ plutovg_matrix_t* matrix);
+    public static extern unsafe void plutovg_path_add_path(plutovg_path_t* path, /*const*/ plutovg_path_t* source, /*const*/ plutovg_matrix_t* matrix);
 
     /**
      * @brief Applies a transformation matrix to the path.
@@ -655,9 +655,8 @@ public static class PlutoVG
      * @param matrix A pointer to a `plutovg_matrix_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_transform(plutovg_path_t* path, /*const*/ plutovg_matrix_t* matrix);
+    public static extern unsafe void plutovg_path_transform(plutovg_path_t* path, /*const*/ plutovg_matrix_t* matrix);
 
-#if false // TODO
     /**
      * @brief Callback function type for traversing a path.
      *
@@ -668,7 +667,9 @@ public static class PlutoVG
      * @param points An array of points associated with the command.
      * @param npoints The number of points in the array.
      */
-    typedef void (*plutovg_path_traverse_func_t)(void* closure, plutovg_path_command_t command, const plutovg_point_t* points, int npoints);
+    //typedef void (*plutovg_path_traverse_func_t)(void* closure, plutovg_path_command_t command, const plutovg_point_t* points, int npoints);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public unsafe delegate void plutovg_path_traverse_func_t(void* closure, plutovg_path_command_t command, /*const*/ plutovg_point_t* points, int npoints);
 
     /**
      * @brief Traverses the path and calls the callback for each element.
@@ -678,7 +679,7 @@ public static class PlutoVG
      * @param closure User-defined data passed to the callback.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_traverse(const plutovg_path_t* path, plutovg_path_traverse_func_t traverse_func, void* closure);
+    public static extern unsafe void plutovg_path_traverse(/*const*/ plutovg_path_t* path, plutovg_path_traverse_func_t traverse_func, void* closure);
 
     /**
      * @brief Traverses the path with Bézier curves flattened to line segments.
@@ -688,7 +689,7 @@ public static class PlutoVG
      * @param closure User-defined data passed to the callback.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_traverse_flatten(/*const*/ plutovg_path_t* path, plutovg_path_traverse_func_t traverse_func, void* closure);
+    public static extern unsafe void plutovg_path_traverse_flatten(/*const*/ plutovg_path_t* path, plutovg_path_traverse_func_t traverse_func, void* closure);
 
     /**
      * @brief Traverses the path with a dashed pattern and calls the callback for each segment.
@@ -701,8 +702,7 @@ public static class PlutoVG
      * @param closure User-defined data passed to the callback.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_path_traverse_dashed(/*const*/ plutovg_path_t* path, float offset, /*const*/ float* dashes, int ndashes, plutovg_path_traverse_func_t traverse_func, void* closure);
-#endif
+    public static extern unsafe void plutovg_path_traverse_dashed(/*const*/ plutovg_path_t* path, float offset, /*const*/ float* dashes, int ndashes, plutovg_path_traverse_func_t traverse_func, void* closure);
 
     /**
      * @brief Creates a copy of the path.
@@ -711,7 +711,7 @@ public static class PlutoVG
      * @return A pointer to the newly created path clone.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_path_t* plutovg_path_clone(/*const*/ plutovg_path_t* path);
+    public static extern unsafe plutovg_path_t* plutovg_path_clone(/*const*/ plutovg_path_t* path);
 
     /**
      * @brief Creates a copy of the path with Bézier curves flattened to line segments.
@@ -720,7 +720,7 @@ public static class PlutoVG
      * @return A pointer to the newly created path clone with flattened curves.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_path_t* plutovg_path_clone_flatten(/*const*/ plutovg_path_t* path);
+    public static extern unsafe plutovg_path_t* plutovg_path_clone_flatten(/*const*/ plutovg_path_t* path);
 
     /**
      * @brief Creates a copy of the path with a dashed pattern applied.
@@ -732,7 +732,7 @@ public static class PlutoVG
      * @return A pointer to the newly created path clone with dashed pattern.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_path_t* plutovg_path_clone_dashed(/*const*/ plutovg_path_t* path, float offset, /*const*/ float* dashes, int ndashes);
+    public static extern unsafe plutovg_path_t* plutovg_path_clone_dashed(/*const*/ plutovg_path_t* path, float offset, /*const*/ float* dashes, int ndashes);
 
     /**
      * @brief Computes the bounding box and total length of the path.
@@ -742,7 +742,7 @@ public static class PlutoVG
      * @return The total length of the path.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_path_extents(/*const*/ plutovg_path_t* path, plutovg_rect_t* extents);
+    public static extern unsafe float plutovg_path_extents(/*const*/ plutovg_path_t* path, plutovg_rect_t* extents);
 
     /**
      * @brief Calculates the total length of the path.
@@ -751,7 +751,7 @@ public static class PlutoVG
      * @return The total length of the path.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_path_length(/*const*/ plutovg_path_t* path);
+    public static extern unsafe float plutovg_path_length(/*const*/ plutovg_path_t* path);
 
     /**
      * @brief Parses SVG path data into a `plutovg_path_t` object.
@@ -762,7 +762,7 @@ public static class PlutoVG
      * @return `true` if successful; `false` otherwise.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  bool plutovg_path_parse(plutovg_path_t* path, /*const*/ char* data, int length);
+    public static extern unsafe bool plutovg_path_parse(plutovg_path_t* path, /*const*/ char* data, int length);
 
     /**
      * @brief Text encodings used for converting text data to code points.
@@ -800,7 +800,7 @@ public static class PlutoVG
      * @param encoding Encoding of the text data.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_text_iterator_init(plutovg_text_iterator_t* it, /*const*/ void* text, int length, plutovg_text_encoding_t encoding);
+    public static extern unsafe void plutovg_text_iterator_init(plutovg_text_iterator_t* it, /*const*/ void* text, int length, plutovg_text_encoding_t encoding);
 
     /**
      * @brief Checks if there are more code points to iterate.
@@ -809,7 +809,7 @@ public static class PlutoVG
      * @return `true` if more code points are available; otherwise, `false`.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  bool plutovg_text_iterator_has_next(/*const*/ plutovg_text_iterator_t* it);
+    public static extern unsafe bool plutovg_text_iterator_has_next(/*const*/ plutovg_text_iterator_t* it);
 
     /**
      * @brief Retrieves the next code point and advances the iterator.
@@ -818,7 +818,7 @@ public static class PlutoVG
      * @return The next code point.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_codepoint_t plutovg_text_iterator_next(plutovg_text_iterator_t* it);
+    public static extern unsafe plutovg_codepoint_t plutovg_text_iterator_next(plutovg_text_iterator_t* it);
 
     /**
      * @brief Represents a font face.
@@ -836,9 +836,8 @@ public static class PlutoVG
      * @return A pointer to the loaded `plutovg_font_face_t` object, or `NULL` on failure.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_font_face_t* plutovg_font_face_load_from_file(/*const*/ char* filename, int ttcindex);
+    public static extern unsafe plutovg_font_face_t* plutovg_font_face_load_from_file(/*const*/ char* filename, int ttcindex);
 
-#if false // TODO
     /**
      * @brief Loads a font face from memory.
      *
@@ -850,8 +849,7 @@ public static class PlutoVG
      * @return A pointer to the loaded `plutovg_font_face_t` object, or `NULL` on failure.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_font_face_t* plutovg_font_face_load_from_data(const void* data, unsigned int length, int ttcindex, plutovg_destroy_func_t destroy_func, void* closure);
-#endif
+    public static extern unsafe plutovg_font_face_t* plutovg_font_face_load_from_data(/*const*/ void* data, uint length, int ttcindex, plutovg_destroy_func_t destroy_func, void* closure);
 
     /**
      * @brief Increments the reference count of a font face.
@@ -860,7 +858,7 @@ public static class PlutoVG
      * @return A pointer to the same `plutovg_font_face_t` object with an incremented reference count.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_font_face_t* plutovg_font_face_reference(plutovg_font_face_t* face);
+    public static extern unsafe plutovg_font_face_t* plutovg_font_face_reference(plutovg_font_face_t* face);
 
     /**
      * @brief Decrements the reference count and potentially destroys the font face.
@@ -868,7 +866,7 @@ public static class PlutoVG
      * @param face A pointer to a `plutovg_font_face_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_font_face_destroy(plutovg_font_face_t* face);
+    public static extern unsafe void plutovg_font_face_destroy(plutovg_font_face_t* face);
 
     /**
      * @brief Retrieves the current reference count of a font face.
@@ -877,7 +875,7 @@ public static class PlutoVG
      * @return The reference count of the font face.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  int plutovg_font_face_get_reference_count(/*const*/ plutovg_font_face_t* face);
+    public static extern unsafe int plutovg_font_face_get_reference_count(/*const*/ plutovg_font_face_t* face);
 
     /**
      * @brief Retrieves metrics for a font face at a specified size.
@@ -890,7 +888,7 @@ public static class PlutoVG
      * @param extents Pointer to a `plutovg_rect_t` object to store the font bounding box.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_font_face_get_metrics(/*const*/ plutovg_font_face_t* face, float size, float* ascent, float* descent, float* line_gap, plutovg_rect_t* extents);
+    public static extern unsafe void plutovg_font_face_get_metrics(/*const*/ plutovg_font_face_t* face, float size, float* ascent, float* descent, float* line_gap, plutovg_rect_t* extents);
 
     /**
      * @brief Retrieves metrics for a specified glyph at a given size.
@@ -903,7 +901,7 @@ public static class PlutoVG
      * @param extents Pointer to a `plutovg_rect_t` object to store the glyph bounding box.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_font_face_get_glyph_metrics(/*const*/ plutovg_font_face_t* face, float size, plutovg_codepoint_t codepoint, float* advance_width, float* left_side_bearing, plutovg_rect_t* extents);
+    public static extern unsafe void plutovg_font_face_get_glyph_metrics(/*const*/ plutovg_font_face_t* face, float size, plutovg_codepoint_t codepoint, float* advance_width, float* left_side_bearing, plutovg_rect_t* extents);
 
     /**
      * @brief Retrieves the path of a glyph and its advance width.
@@ -917,9 +915,8 @@ public static class PlutoVG
      * @return The advance width of the glyph.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_font_face_get_glyph_path(/*const*/ plutovg_font_face_t* face, float size, float x, float y, plutovg_codepoint_t codepoint, plutovg_path_t* path);
+    public static extern unsafe float plutovg_font_face_get_glyph_path(/*const*/ plutovg_font_face_t* face, float size, float x, float y, plutovg_codepoint_t codepoint, plutovg_path_t* path);
 
-#if false // TODO
     /**
      * @brief Traverses the path of a glyph and calls a callback for each path element.
      *
@@ -933,8 +930,7 @@ public static class PlutoVG
      * @return The advance width of the glyph.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_font_face_traverse_glyph_path(/*const*/ plutovg_font_face_t* face, float size, float x, float y, plutovg_codepoint_t codepoint, plutovg_path_traverse_func_t traverse_func, void* closure);
-#endif
+    public static extern unsafe float plutovg_font_face_traverse_glyph_path(/*const*/ plutovg_font_face_t* face, float size, float x, float y, plutovg_codepoint_t codepoint, plutovg_path_traverse_func_t traverse_func, void* closure);
 
     /**
      * @brief Computes the bounding box of a text string and its advance width.
@@ -948,7 +944,7 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_font_face_text_extents(/*const*/ plutovg_font_face_t* face, float size, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, plutovg_rect_t* extents);
+    public static extern unsafe float plutovg_font_face_text_extents(/*const*/ plutovg_font_face_t* face, float size, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, plutovg_rect_t* extents);
 
     /**
      * @brief Represents an image surface for drawing operations.
@@ -970,7 +966,7 @@ public static class PlutoVG
      * @return A pointer to the newly created `plutovg_surface_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_surface_t* plutovg_surface_create(int width, int height);
+    public static extern unsafe plutovg_surface_t* plutovg_surface_create(int width, int height);
 
     /**
      * @brief Creates an image surface using existing pixel data.
@@ -982,7 +978,7 @@ public static class PlutoVG
      * @return A pointer to the newly created `plutovg_surface_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_surface_t* plutovg_surface_create_for_data(byte* data, int width, int height, int stride);
+    public static extern unsafe plutovg_surface_t* plutovg_surface_create_for_data(byte* data, int width, int height, int stride);
 
     /**
      * @brief Loads an image surface from a file.
@@ -991,7 +987,7 @@ public static class PlutoVG
      * @return Pointer to the surface, or `NULL` on failure.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_surface_t* plutovg_surface_load_from_image_file(/*const*/ char* filename);
+    public static extern unsafe plutovg_surface_t* plutovg_surface_load_from_image_file(/*const*/ char* filename);
 
     /**
      * @brief Loads an image surface from raw image data.
@@ -1001,7 +997,7 @@ public static class PlutoVG
      * @return Pointer to the surface, or `NULL` on failure.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_surface_t* plutovg_surface_load_from_image_data(/*const*/ void* data, int length);
+    public static extern unsafe plutovg_surface_t* plutovg_surface_load_from_image_data(/*const*/ void* data, int length);
 
     /**
      * @brief Loads an image surface from base64-encoded data.
@@ -1011,7 +1007,7 @@ public static class PlutoVG
      * @return Pointer to the surface, or `NULL` on failure.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_surface_t* plutovg_surface_load_from_image_base64(/*const*/ char* data, int length);
+    public static extern unsafe plutovg_surface_t* plutovg_surface_load_from_image_base64(/*const*/ char* data, int length);
 
     /**
      * @brief Increments the reference count for a surface.
@@ -1020,7 +1016,7 @@ public static class PlutoVG
      * @return Pointer to the `plutovg_surface_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_surface_t* plutovg_surface_reference(plutovg_surface_t* surface);
+    public static extern unsafe plutovg_surface_t* plutovg_surface_reference(plutovg_surface_t* surface);
 
     /**
      * @brief Decrements the reference count and destroys the surface if the count reaches zero.
@@ -1028,7 +1024,7 @@ public static class PlutoVG
      * @param surface Pointer to the `plutovg_surface_t` object .
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_surface_destroy(plutovg_surface_t* surface);
+    public static extern unsafe void plutovg_surface_destroy(plutovg_surface_t* surface);
 
     /**
      * @brief Gets the current reference count of a surface.
@@ -1037,7 +1033,7 @@ public static class PlutoVG
      * @return The reference count of the surface.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  int plutovg_surface_get_reference_count(/*const*/ plutovg_surface_t* surface);
+    public static extern unsafe int plutovg_surface_get_reference_count(/*const*/ plutovg_surface_t* surface);
 
     /**
      * @brief Gets the pixel data of the surface.
@@ -1046,7 +1042,7 @@ public static class PlutoVG
      * @return Pointer to the pixel data.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  byte* plutovg_surface_get_data(/*const*/ plutovg_surface_t* surface);
+    public static extern unsafe byte* plutovg_surface_get_data(/*const*/ plutovg_surface_t* surface);
 
     /**
      * @brief Gets the width of the surface.
@@ -1055,7 +1051,7 @@ public static class PlutoVG
      * @return Width of the surface in pixels.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  int plutovg_surface_get_width(/*const*/ plutovg_surface_t* surface);
+    public static extern unsafe int plutovg_surface_get_width(/*const*/ plutovg_surface_t* surface);
 
     /**
      * @brief Gets the height of the surface.
@@ -1064,7 +1060,7 @@ public static class PlutoVG
      * @return Height of the surface in pixels.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  int plutovg_surface_get_height(/*const*/ plutovg_surface_t* surface);
+    public static extern unsafe int plutovg_surface_get_height(/*const*/ plutovg_surface_t* surface);
 
     /**
      * @brief Gets the stride of the surface.
@@ -1073,7 +1069,7 @@ public static class PlutoVG
      * @return Number of bytes per row.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  int plutovg_surface_get_stride(/*const*/ plutovg_surface_t* surface);
+    public static extern unsafe int plutovg_surface_get_stride(/*const*/ plutovg_surface_t* surface);
 
     /**
      * @brief Writes the surface to a PNG file.
@@ -1083,7 +1079,7 @@ public static class PlutoVG
      * @return `true` if successful, `false` otherwise.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  bool plutovg_surface_write_to_png(/*const*/ plutovg_surface_t* surface, /*const*/ char* filename);
+    public static extern unsafe bool plutovg_surface_write_to_png(/*const*/ plutovg_surface_t* surface, /*const*/ char* filename);
 
     /**
      * @brief Writes the surface to a JPEG file.
@@ -1094,9 +1090,8 @@ public static class PlutoVG
      * @return `true` if successful, `false` otherwise.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  bool plutovg_surface_write_to_jpg(/*const*/ plutovg_surface_t* surface, /*const*/ char* filename, int quality);
+    public static extern unsafe bool plutovg_surface_write_to_jpg(/*const*/ plutovg_surface_t* surface, /*const*/ char* filename, int quality);
 
-#if false // TODO
     /**
      * @brief Writes the surface to a PNG stream.
      *
@@ -1106,7 +1101,7 @@ public static class PlutoVG
      * @return `true` if successful, `false` otherwise.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  bool plutovg_surface_write_to_png_stream(/*const*/ plutovg_surface_t* surface, plutovg_write_func_t write_func, void* closure);
+    public static extern unsafe bool plutovg_surface_write_to_png_stream(/*const*/ plutovg_surface_t* surface, plutovg_write_func_t write_func, void* closure);
 
     /**
      * @brief Writes the surface to a JPEG stream.
@@ -1118,8 +1113,7 @@ public static class PlutoVG
      * @return `true` if successful, `false` otherwise.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  bool plutovg_surface_write_to_jpg_stream(/*const*/ plutovg_surface_t* surface, plutovg_write_func_t write_func, void* closure, int quality);
-#endif
+    public static extern unsafe bool plutovg_surface_write_to_jpg_stream(/*const*/ plutovg_surface_t* surface, plutovg_write_func_t write_func, void* closure, int quality);
 
     /**
      * @brief Converts ARGB Premultiplied to RGBA Plain.
@@ -1131,7 +1125,7 @@ public static class PlutoVG
      * @param stride Image stride in bytes.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_convert_argb_to_rgba(byte* dst, /*const*/ byte* src, int width, int height, int stride);
+    public static extern unsafe void plutovg_convert_argb_to_rgba(byte* dst, /*const*/ byte* src, int width, int height, int stride);
 
     /**
      * @brief Converts RGBA Plain to ARGB Premultiplied.
@@ -1143,7 +1137,7 @@ public static class PlutoVG
      * @param stride Image stride in bytes.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_convert_rgba_to_argb(byte* dst, /*const*/ byte* src, int width, int height, int stride);
+    public static extern unsafe void plutovg_convert_rgba_to_argb(byte* dst, /*const*/ byte* src, int width, int height, int stride);
 
     /**
      * @brief Represents a color with red, green, blue, and alpha components.
@@ -1197,7 +1191,7 @@ public static class PlutoVG
      * @return A pointer to the created `plutovg_paint_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_paint_t* plutovg_paint_create_rgb(float r, float g, float b);
+    public static extern unsafe plutovg_paint_t* plutovg_paint_create_rgb(float r, float g, float b);
 
     /**
      * @brief Creates a solid RGBA paint.
@@ -1209,7 +1203,7 @@ public static class PlutoVG
      * @return A pointer to the created `plutovg_paint_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_paint_t* plutovg_paint_create_rgba(float r, float g, float b, float a);
+    public static extern unsafe plutovg_paint_t* plutovg_paint_create_rgba(float r, float g, float b, float a);
 
     /**
      * @brief Creates a solid color paint.
@@ -1218,7 +1212,7 @@ public static class PlutoVG
      * @return A pointer to the created `plutovg_paint_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_paint_t* plutovg_paint_create_color(/*const*/ plutovg_color_t* color);
+    public static extern unsafe plutovg_paint_t* plutovg_paint_create_color(/*const*/ plutovg_color_t* color);
 
     /**
      * @brief Creates a linear gradient paint.
@@ -1234,7 +1228,7 @@ public static class PlutoVG
      * @return A pointer to the created `plutovg_paint_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_paint_t* plutovg_paint_create_linear_gradient(float x1, float y1, float x2, float y2,
+    public static extern unsafe plutovg_paint_t* plutovg_paint_create_linear_gradient(float x1, float y1, float x2, float y2,
                                                                       plutovg_spread_method_t spread, /*const*/ plutovg_gradient_stop_t* stops, int nstops, /*const*/ plutovg_matrix_t* matrix);
 
     /**
@@ -1253,7 +1247,7 @@ public static class PlutoVG
      * @return A pointer to the created `plutovg_paint_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_paint_t* plutovg_paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr,
+    public static extern unsafe plutovg_paint_t* plutovg_paint_create_radial_gradient(float cx, float cy, float cr, float fx, float fy, float fr,
                                                                       plutovg_spread_method_t spread, /*const*/ plutovg_gradient_stop_t* stops, int nstops, /*const*/ plutovg_matrix_t* matrix);
 
     /**
@@ -1266,7 +1260,7 @@ public static class PlutoVG
      * @return A pointer to the created `plutovg_paint_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_paint_t* plutovg_paint_create_texture(plutovg_surface_t* surface, plutovg_texture_type_t type, float opacity, /*const*/ plutovg_matrix_t* matrix);
+    public static extern unsafe plutovg_paint_t* plutovg_paint_create_texture(plutovg_surface_t* surface, plutovg_texture_type_t type, float opacity, /*const*/ plutovg_matrix_t* matrix);
 
     /**
      * @brief Increments the reference count of a paint object.
@@ -1275,7 +1269,7 @@ public static class PlutoVG
      * @return A pointer to the referenced `plutovg_paint_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_paint_t* plutovg_paint_reference(plutovg_paint_t* paint);
+    public static extern unsafe plutovg_paint_t* plutovg_paint_reference(plutovg_paint_t* paint);
 
     /**
      * @brief Decrements the reference count and destroys the paint if the count reaches zero.
@@ -1283,7 +1277,7 @@ public static class PlutoVG
      * @param paint A pointer to the `plutovg_paint_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_paint_destroy(plutovg_paint_t* paint);
+    public static extern unsafe void plutovg_paint_destroy(plutovg_paint_t* paint);
 
     /**
      * @brief Retrieves the reference count of a paint object.
@@ -1292,7 +1286,7 @@ public static class PlutoVG
      * @return The reference count of the `plutovg_paint_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  int plutovg_paint_get_reference_count(/*const*/ plutovg_paint_t* paint);
+    public static extern unsafe int plutovg_paint_get_reference_count(/*const*/ plutovg_paint_t* paint);
 
     /**
      * @brief Defines fill rule types for filling paths.
@@ -1345,7 +1339,7 @@ public static class PlutoVG
      * @return A pointer to the newly created `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_canvas_t* plutovg_canvas_create(plutovg_surface_t* surface);
+    public static extern unsafe plutovg_canvas_t* plutovg_canvas_create(plutovg_surface_t* surface);
 
     /**
      * @brief Increases the reference count of the canvas.
@@ -1354,7 +1348,7 @@ public static class PlutoVG
      * @return The same pointer to the `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_canvas_t* plutovg_canvas_reference(plutovg_canvas_t* canvas);
+    public static extern unsafe plutovg_canvas_t* plutovg_canvas_reference(plutovg_canvas_t* canvas);
 
     /**
      * @brief Decreases the reference count and destroys the canvas when it reaches zero.
@@ -1362,7 +1356,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_destroy(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_destroy(plutovg_canvas_t* canvas);
 
     /**
      * @brief Retrieves the reference count of the canvas.
@@ -1371,7 +1365,7 @@ public static class PlutoVG
      * @return The current reference count.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  int plutovg_canvas_get_reference_count(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe int plutovg_canvas_get_reference_count(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Gets the surface associated with the canvas.
@@ -1380,7 +1374,7 @@ public static class PlutoVG
      * @return A pointer to the `plutovg_surface_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_surface_t* plutovg_canvas_get_surface(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe plutovg_surface_t* plutovg_canvas_get_surface(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Saves the current state of the canvas.
@@ -1388,7 +1382,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_save(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_save(plutovg_canvas_t* canvas);
 
     /**
      * @brief Restores the canvas to the most recently saved state.
@@ -1396,7 +1390,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_restore(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_restore(plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the current paint to a solid color.
@@ -1407,7 +1401,7 @@ public static class PlutoVG
      * @param b The blue component (0 to 1).
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_rgb(plutovg_canvas_t* canvas, float r, float g, float b);
+    public static extern unsafe void plutovg_canvas_set_rgb(plutovg_canvas_t* canvas, float r, float g, float b);
 
     /**
      * @brief Sets the current paint to a solid color.
@@ -1419,7 +1413,7 @@ public static class PlutoVG
      * @param a The alpha component (0 to 1).
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_rgba(plutovg_canvas_t* canvas, float r, float g, float b, float a);
+    public static extern unsafe void plutovg_canvas_set_rgba(plutovg_canvas_t* canvas, float r, float g, float b, float a);
 
     /**
      * @brief Sets the current paint to a solid color.
@@ -1428,7 +1422,7 @@ public static class PlutoVG
      * @param color A pointer to a `plutovg_color_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_color(plutovg_canvas_t* canvas, /*const*/ plutovg_color_t* color);
+    public static extern unsafe void plutovg_canvas_set_color(plutovg_canvas_t* canvas, /*const*/ plutovg_color_t* color);
 
     /**
      * @brief Sets the current paint to a linear gradient.
@@ -1444,7 +1438,7 @@ public static class PlutoVG
      * @param matrix Optional transformation matrix.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_linear_gradient(plutovg_canvas_t* canvas, float x1, float y1, float x2, float y2,
+    public static extern unsafe void plutovg_canvas_set_linear_gradient(plutovg_canvas_t* canvas, float x1, float y1, float x2, float y2,
                                                         plutovg_spread_method_t spread, /*const*/ plutovg_gradient_stop_t* stops, int nstops, /*const*/ plutovg_matrix_t* matrix);
 
     /**
@@ -1463,7 +1457,7 @@ public static class PlutoVG
      * @param matrix Optional transformation matrix.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_radial_gradient(plutovg_canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr,
+    public static extern unsafe void plutovg_canvas_set_radial_gradient(plutovg_canvas_t* canvas, float cx, float cy, float cr, float fx, float fy, float fr,
                                                         plutovg_spread_method_t spread, /*const*/ plutovg_gradient_stop_t* stops, int nstops, /*const*/ plutovg_matrix_t* matrix);
 
     /**
@@ -1476,7 +1470,7 @@ public static class PlutoVG
      * @param matrix Optional transformation matrix.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_texture(plutovg_canvas_t* canvas, plutovg_surface_t* surface, plutovg_texture_type_t type, float opacity, /*const*/ plutovg_matrix_t* matrix);
+    public static extern unsafe void plutovg_canvas_set_texture(plutovg_canvas_t* canvas, plutovg_surface_t* surface, plutovg_texture_type_t type, float opacity, /*const*/ plutovg_matrix_t* matrix);
 
     /**
      * @brief Sets the current paint.
@@ -1485,7 +1479,7 @@ public static class PlutoVG
      * @param paint The paint to be used for subsequent drawing operations.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_paint(plutovg_canvas_t* canvas, plutovg_paint_t* paint);
+    public static extern unsafe void plutovg_canvas_set_paint(plutovg_canvas_t* canvas, plutovg_paint_t* paint);
 
     /**
      * @brief Retrieves the current paint.
@@ -1494,7 +1488,7 @@ public static class PlutoVG
      * @return The current paint used for drawing operations.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_paint_t* plutovg_canvas_get_paint(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe plutovg_paint_t* plutovg_canvas_get_paint(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the font face and size for text rendering on the canvas.
@@ -1504,7 +1498,7 @@ public static class PlutoVG
      * @param size The size of the font, in pixels. This determines the height of the rendered text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_font(plutovg_canvas_t* canvas, plutovg_font_face_t* face, float size);
+    public static extern unsafe void plutovg_canvas_set_font(plutovg_canvas_t* canvas, plutovg_font_face_t* face, float size);
 
     /**
      * @brief Sets the font face for text rendering on the canvas.
@@ -1513,7 +1507,7 @@ public static class PlutoVG
      * @param face A pointer to a `plutovg_font_face_t` object representing the font face to use.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_font_face(plutovg_canvas_t* canvas, plutovg_font_face_t* face);
+    public static extern unsafe void plutovg_canvas_set_font_face(plutovg_canvas_t* canvas, plutovg_font_face_t* face);
 
     /**
      * @brief Retrieves the current font face used for text rendering on the canvas.
@@ -1522,7 +1516,7 @@ public static class PlutoVG
      * @return A pointer to a `plutovg_font_face_t` object representing the current font face.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_font_face_t* plutovg_canvas_get_font_face(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe plutovg_font_face_t* plutovg_canvas_get_font_face(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the font size for text rendering on the canvas.
@@ -1531,7 +1525,7 @@ public static class PlutoVG
      * @param size The size of the font, in pixels. This value defines the height of the rendered text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_font_size(plutovg_canvas_t* canvas, float size);
+    public static extern unsafe void plutovg_canvas_set_font_size(plutovg_canvas_t* canvas, float size);
 
     /**
      * @brief Retrieves the current font size used for text rendering on the canvas.
@@ -1540,7 +1534,7 @@ public static class PlutoVG
      * @return The current font size, in pixels. This value represents the height of the rendered text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_get_font_size(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe float plutovg_canvas_get_font_size(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the fill rule.
@@ -1548,7 +1542,7 @@ public static class PlutoVG
      * @param winding The fill rule.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_fill_rule(plutovg_canvas_t* canvas, plutovg_fill_rule_t winding);
+    public static extern unsafe void plutovg_canvas_set_fill_rule(plutovg_canvas_t* canvas, plutovg_fill_rule_t winding);
 
     /**
      * @brief Retrieves the current fill rule.
@@ -1556,7 +1550,7 @@ public static class PlutoVG
      * @return The current fill rule.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_fill_rule_t plutovg_canvas_get_fill_rule(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe plutovg_fill_rule_t plutovg_canvas_get_fill_rule(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the compositing operator.
@@ -1564,7 +1558,7 @@ public static class PlutoVG
      * @param op The compositing operator.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_operator(plutovg_canvas_t* canvas, plutovg_operator_t op);
+    public static extern unsafe void plutovg_canvas_set_operator(plutovg_canvas_t* canvas, plutovg_operator_t op);
 
     /**
      * @brief Retrieves the current compositing operator.
@@ -1572,7 +1566,7 @@ public static class PlutoVG
      * @return The current compositing operator.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_operator_t plutovg_canvas_get_operator(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe plutovg_operator_t plutovg_canvas_get_operator(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the global opacity.
@@ -1580,7 +1574,7 @@ public static class PlutoVG
      * @param opacity The opacity value (0 to 1).
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_opacity(plutovg_canvas_t* canvas, float opacity);
+    public static extern unsafe void plutovg_canvas_set_opacity(plutovg_canvas_t* canvas, float opacity);
 
     /**
      * @brief Retrieves the current global opacity.
@@ -1588,7 +1582,7 @@ public static class PlutoVG
      * @return The current opacity value.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_get_opacity(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe float plutovg_canvas_get_opacity(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the line width.
@@ -1596,7 +1590,7 @@ public static class PlutoVG
      * @param line_width The width of the stroke.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_line_width(plutovg_canvas_t* canvas, float line_width);
+    public static extern unsafe void plutovg_canvas_set_line_width(plutovg_canvas_t* canvas, float line_width);
 
     /**
      * @brief Retrieves the current line width.
@@ -1604,7 +1598,7 @@ public static class PlutoVG
      * @return The current line width.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_get_line_width(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe float plutovg_canvas_get_line_width(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the line cap style.
@@ -1612,7 +1606,7 @@ public static class PlutoVG
      * @param line_cap The line cap style.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_line_cap(plutovg_canvas_t* canvas, plutovg_line_cap_t line_cap);
+    public static extern unsafe void plutovg_canvas_set_line_cap(plutovg_canvas_t* canvas, plutovg_line_cap_t line_cap);
 
     /**
      * @brief Retrieves the current line cap style.
@@ -1620,7 +1614,7 @@ public static class PlutoVG
      * @return The current line cap style.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_line_cap_t plutovg_canvas_get_line_cap(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe plutovg_line_cap_t plutovg_canvas_get_line_cap(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the line join style.
@@ -1628,7 +1622,7 @@ public static class PlutoVG
      * @param line_join The line join style.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_line_join(plutovg_canvas_t* canvas, plutovg_line_join_t line_join);
+    public static extern unsafe void plutovg_canvas_set_line_join(plutovg_canvas_t* canvas, plutovg_line_join_t line_join);
 
     /**
      * @brief Retrieves the current line join style.
@@ -1636,7 +1630,7 @@ public static class PlutoVG
      * @return The current line join style.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_line_join_t plutovg_canvas_get_line_join(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe plutovg_line_join_t plutovg_canvas_get_line_join(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the miter limit.
@@ -1644,7 +1638,7 @@ public static class PlutoVG
      * @param miter_limit The miter limit value.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_miter_limit(plutovg_canvas_t* canvas, float miter_limit);
+    public static extern unsafe void plutovg_canvas_set_miter_limit(plutovg_canvas_t* canvas, float miter_limit);
 
     /**
      * @brief Retrieves the current miter limit.
@@ -1652,7 +1646,7 @@ public static class PlutoVG
      * @return The current miter limit value.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_get_miter_limit(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe float plutovg_canvas_get_miter_limit(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the dash pattern.
@@ -1662,7 +1656,7 @@ public static class PlutoVG
      * @param ndashes Number of dash lengths.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_dash(plutovg_canvas_t* canvas, float offset, /*const*/ float* dashes, int ndashes);
+    public static extern unsafe void plutovg_canvas_set_dash(plutovg_canvas_t* canvas, float offset, /*const*/ float* dashes, int ndashes);
 
     /**
      * @brief Sets the dash offset.
@@ -1670,7 +1664,7 @@ public static class PlutoVG
      * @param offset The dash offset.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_dash_offset(plutovg_canvas_t* canvas, float offset);
+    public static extern unsafe void plutovg_canvas_set_dash_offset(plutovg_canvas_t* canvas, float offset);
 
     /**
      * @brief Retrieves the current dash offset.
@@ -1678,7 +1672,7 @@ public static class PlutoVG
      * @return The current dash offset.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_get_dash_offset(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe float plutovg_canvas_get_dash_offset(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Sets the dash pattern.
@@ -1687,7 +1681,7 @@ public static class PlutoVG
      * @param ndashes Number of dash lengths.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_dash_array(plutovg_canvas_t* canvas, /*const*/ float* dashes, int ndashes);
+    public static extern unsafe void plutovg_canvas_set_dash_array(plutovg_canvas_t* canvas, /*const*/ float* dashes, int ndashes);
 
     /**
      * @brief Retrieves the current dash pattern.
@@ -1696,7 +1690,7 @@ public static class PlutoVG
      * @return The number of dash lengths.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  int plutovg_canvas_get_dash_array(/*const*/ plutovg_canvas_t* canvas, /*const*/ float** dashes);
+    public static extern unsafe int plutovg_canvas_get_dash_array(/*const*/ plutovg_canvas_t* canvas, /*const*/ float** dashes);
 
     /**
      * @brief Translates the current transformation matrix by offsets `tx` and `ty`.
@@ -1705,7 +1699,7 @@ public static class PlutoVG
      * @param ty The translation offset in the y-direction.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_translate(plutovg_canvas_t* canvas, float tx, float ty);
+    public static extern unsafe void plutovg_canvas_translate(plutovg_canvas_t* canvas, float tx, float ty);
 
     /**
      * @brief Scales the current transformation matrix by factors `sx` and `sy`.
@@ -1714,7 +1708,7 @@ public static class PlutoVG
      * @param sy The scaling factor in the y-direction.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_scale(plutovg_canvas_t* canvas, float sx, float sy);
+    public static extern unsafe void plutovg_canvas_scale(plutovg_canvas_t* canvas, float sx, float sy);
 
     /**
      * @brief Shears the current transformation matrix by factors `shx` and `shy`.
@@ -1723,7 +1717,7 @@ public static class PlutoVG
      * @param shy The shearing factor in the y-direction.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_shear(plutovg_canvas_t* canvas, float shx, float shy);
+    public static extern unsafe void plutovg_canvas_shear(plutovg_canvas_t* canvas, float shx, float shy);
 
     /**
      * @brief Rotates the current transformation matrix by the specified angle (in radians).
@@ -1731,7 +1725,7 @@ public static class PlutoVG
      * @param angle The rotation angle in radians.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_rotate(plutovg_canvas_t* canvas, float angle);
+    public static extern unsafe void plutovg_canvas_rotate(plutovg_canvas_t* canvas, float angle);
 
     /**
      * @brief Multiplies the current transformation matrix with the specified `matrix`.
@@ -1739,14 +1733,14 @@ public static class PlutoVG
      * @param matrix A pointer to the `plutovg_matrix_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_transform(plutovg_canvas_t* canvas, /*const*/ plutovg_matrix_t* matrix);
+    public static extern unsafe void plutovg_canvas_transform(plutovg_canvas_t* canvas, /*const*/ plutovg_matrix_t* matrix);
 
     /**
      * @brief Resets the current transformation matrix to the identity matrix.
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_reset_matrix(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_reset_matrix(plutovg_canvas_t* canvas);
 
     /**
      * @brief Resets the current transformation matrix to the specified `matrix`.
@@ -1754,7 +1748,7 @@ public static class PlutoVG
      * @param matrix A pointer to the `plutovg_matrix_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_set_matrix(plutovg_canvas_t* canvas, /*const*/ plutovg_matrix_t* matrix);
+    public static extern unsafe void plutovg_canvas_set_matrix(plutovg_canvas_t* canvas, /*const*/ plutovg_matrix_t* matrix);
 
     /**
      * @brief Stores the current transformation matrix in `matrix`.
@@ -1762,7 +1756,7 @@ public static class PlutoVG
      * @param A pointer to the `plutovg_matrix_t` to store the matrix.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_get_matrix(/*const*/ plutovg_canvas_t* canvas, plutovg_matrix_t* matrix);
+    public static extern unsafe void plutovg_canvas_get_matrix(/*const*/ plutovg_canvas_t* canvas, plutovg_matrix_t* matrix);
 
     /**
      * @brief Transforms the point `(x, y)` using the current transformation matrix and stores the result in `(xx, yy)`.
@@ -1773,7 +1767,7 @@ public static class PlutoVG
      * @param yy A pointer to store the transformed y-coordinate.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_map(/*const*/ plutovg_canvas_t* canvas, float x, float y, float* xx, float* yy);
+    public static extern unsafe void plutovg_canvas_map(/*const*/ plutovg_canvas_t* canvas, float x, float y, float* xx, float* yy);
 
     /**
      * @brief Transforms the `src` point using the current transformation matrix and stores the result in `dst`.
@@ -1783,7 +1777,7 @@ public static class PlutoVG
      * @param dst A pointer to the `plutovg_point_t` to store the transformed point.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_map_point(/*const*/ plutovg_canvas_t* canvas, /*const*/ plutovg_point_t* src, plutovg_point_t* dst);
+    public static extern unsafe void plutovg_canvas_map_point(/*const*/ plutovg_canvas_t* canvas, /*const*/ plutovg_point_t* src, plutovg_point_t* dst);
 
     /**
      * @brief Transforms the `src` rectangle using the current transformation matrix and stores the result in `dst`.
@@ -1793,7 +1787,7 @@ public static class PlutoVG
      * @param dst A pointer to the `plutovg_rect_t` to store the transformed rectangle.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_map_rect(/*const*/ plutovg_canvas_t* canvas, /*const*/ plutovg_rect_t* src, plutovg_rect_t* dst);
+    public static extern unsafe void plutovg_canvas_map_rect(/*const*/ plutovg_canvas_t* canvas, /*const*/ plutovg_rect_t* src, plutovg_rect_t* dst);
 
     /**
      * @brief Moves the current point to a new position.
@@ -1806,7 +1800,7 @@ public static class PlutoVG
      * @param y The y-coordinate of the new position.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_move_to(plutovg_canvas_t* canvas, float x, float y);
+    public static extern unsafe void plutovg_canvas_move_to(plutovg_canvas_t* canvas, float x, float y);
 
     /**
      * @brief Adds a straight line segment to the current path.
@@ -1819,7 +1813,7 @@ public static class PlutoVG
      * @param y The y-coordinate of the end point of the line.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_line_to(plutovg_canvas_t* canvas, float x, float y);
+    public static extern unsafe void plutovg_canvas_line_to(plutovg_canvas_t* canvas, float x, float y);
 
     /**
      * @brief Adds a quadratic Bézier curve to the current path.
@@ -1834,7 +1828,7 @@ public static class PlutoVG
      * @param y2 The y-coordinate of the end point of the curve.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_quad_to(plutovg_canvas_t* canvas, float x1, float y1, float x2, float y2);
+    public static extern unsafe void plutovg_canvas_quad_to(plutovg_canvas_t* canvas, float x1, float y1, float x2, float y2);
 
     /**
      * @brief Adds a cubic Bézier curve to the current path.
@@ -1851,7 +1845,7 @@ public static class PlutoVG
      * @param y3 The y-coordinate of the end point of the curve.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_cubic_to(plutovg_canvas_t* canvas, float x1, float y1, float x2, float y2, float x3, float y3);
+    public static extern unsafe void plutovg_canvas_cubic_to(plutovg_canvas_t* canvas, float x1, float y1, float x2, float y2, float x3, float y3);
 
     /**
      * @brief Adds an elliptical arc to the current path.
@@ -1870,7 +1864,7 @@ public static class PlutoVG
      * @param y The y-coordinate of the end point.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_arc_to(plutovg_canvas_t* canvas, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y);
+    public static extern unsafe void plutovg_canvas_arc_to(plutovg_canvas_t* canvas, float rx, float ry, float angle, bool large_arc_flag, bool sweep_flag, float x, float y);
 
     /**
      * @brief Adds a rectangle to the current path.
@@ -1884,7 +1878,7 @@ public static class PlutoVG
      * @param h The height of the rectangle.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_rect(plutovg_canvas_t* canvas, float x, float y, float w, float h);
+    public static extern unsafe void plutovg_canvas_rect(plutovg_canvas_t* canvas, float x, float y, float w, float h);
 
     /**
      * @brief Adds a rounded rectangle to the current path.
@@ -1901,7 +1895,7 @@ public static class PlutoVG
      * @param ry The y-radius of the corners.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_round_rect(plutovg_canvas_t* canvas, float x, float y, float w, float h, float rx, float ry);
+    public static extern unsafe void plutovg_canvas_round_rect(plutovg_canvas_t* canvas, float x, float y, float w, float h, float rx, float ry);
 
     /**
      * @brief Adds an ellipse to the current path.
@@ -1915,7 +1909,7 @@ public static class PlutoVG
      * @param ry The y-radius of the ellipse.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_ellipse(plutovg_canvas_t* canvas, float cx, float cy, float rx, float ry);
+    public static extern unsafe void plutovg_canvas_ellipse(plutovg_canvas_t* canvas, float cx, float cy, float rx, float ry);
 
     /**
      * @brief Adds a circle to the current path.
@@ -1928,7 +1922,7 @@ public static class PlutoVG
      * @param r The radius of the circle.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_circle(plutovg_canvas_t* canvas, float cx, float cy, float r);
+    public static extern unsafe void plutovg_canvas_circle(plutovg_canvas_t* canvas, float cx, float cy, float r);
 
     /**
      * @brief Adds an arc to the current path.
@@ -1946,7 +1940,7 @@ public static class PlutoVG
      * @param ccw If true, add the arc counter-clockwise; otherwise, clockwise.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_arc(plutovg_canvas_t* canvas, float cx, float cy, float r, float a0, float a1, bool ccw);
+    public static extern unsafe void plutovg_canvas_arc(plutovg_canvas_t* canvas, float cx, float cy, float r, float a0, float a1, bool ccw);
 
     /**
      * @brief Adds a path to the current path.
@@ -1957,7 +1951,7 @@ public static class PlutoVG
      * @param path A pointer to the `plutovg_path_t` object to be added.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_add_path(plutovg_canvas_t* canvas, /*const*/ plutovg_path_t* path);
+    public static extern unsafe void plutovg_canvas_add_path(plutovg_canvas_t* canvas, /*const*/ plutovg_path_t* path);
 
     /**
      * @brief Starts a new path on the canvas.
@@ -1967,7 +1961,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_new_path(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_new_path(plutovg_canvas_t* canvas);
 
     /**
      * @brief Closes the current path.
@@ -1977,7 +1971,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_close_path(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_close_path(plutovg_canvas_t* canvas);
 
     /**
      * @brief Retrieves the current point of the canvas.
@@ -1990,7 +1984,7 @@ public static class PlutoVG
      * @param y The y-coordinate of the current point.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_get_current_point(/*const*/ plutovg_canvas_t* canvas, float* x, float* y);
+    public static extern unsafe void plutovg_canvas_get_current_point(/*const*/ plutovg_canvas_t* canvas, float* x, float* y);
 
     /**
      * @brief Gets the current path from the canvas.
@@ -2001,7 +1995,7 @@ public static class PlutoVG
      * @return The current path.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  plutovg_path_t* plutovg_canvas_get_path(/*const*/ plutovg_canvas_t* canvas);
+    public static extern unsafe plutovg_path_t* plutovg_canvas_get_path(/*const*/ plutovg_canvas_t* canvas);
 
     /**
      * @brief Gets the bounding box of the filled region.
@@ -2010,7 +2004,7 @@ public static class PlutoVG
      * @param extents The bounding box of the filled region.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_fill_extents(/*const*/ plutovg_canvas_t* canvas, plutovg_rect_t* extents);
+    public static extern unsafe void plutovg_canvas_fill_extents(/*const*/ plutovg_canvas_t* canvas, plutovg_rect_t* extents);
 
     /**
      * @brief Gets the bounding box of the stroked region.
@@ -2019,7 +2013,7 @@ public static class PlutoVG
      * @param extents The bounding box of the stroked region.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_stroke_extents(/*const*/ plutovg_canvas_t* canvas, plutovg_rect_t* extents);
+    public static extern unsafe void plutovg_canvas_stroke_extents(/*const*/ plutovg_canvas_t* canvas, plutovg_rect_t* extents);
 
     /**
      * @brief Gets the bounding box of the clipped region.
@@ -2028,7 +2022,7 @@ public static class PlutoVG
      * @param extents The bounding box of the clipped region.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_clip_extents(/*const*/ plutovg_canvas_t* canvas, plutovg_rect_t* extents);
+    public static extern unsafe void plutovg_canvas_clip_extents(/*const*/ plutovg_canvas_t* canvas, plutovg_rect_t* extents);
 
     /**
      * @brief A drawing operator that fills the current path according to the current fill rule.
@@ -2038,7 +2032,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_fill(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_fill(plutovg_canvas_t* canvas);
 
     /**
      * @brief A drawing operator that strokes the current path according to the current stroke settings.
@@ -2048,7 +2042,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_stroke(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_stroke(plutovg_canvas_t* canvas);
 
     /**
      * @brief A drawing operator that intersects the current clipping region with the current path according to the current fill rule.
@@ -2058,7 +2052,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_clip(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_clip(plutovg_canvas_t* canvas);
 
     /**
      * @brief A drawing operator that paints the current clipping region using the current paint.
@@ -2067,7 +2061,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_paint(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_paint(plutovg_canvas_t* canvas);
 
     /**
      * @brief A drawing operator that fills the current path according to the current fill rule.
@@ -2077,7 +2071,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_fill_preserve(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_fill_preserve(plutovg_canvas_t* canvas);
 
     /**
      * @brief A drawing operator that strokes the current path according to the current stroke settings.
@@ -2087,7 +2081,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_stroke_preserve(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_stroke_preserve(plutovg_canvas_t* canvas);
 
     /**
      * @brief A drawing operator that intersects the current clipping region with the current path according to the current fill rule.
@@ -2097,7 +2091,7 @@ public static class PlutoVG
      * @param canvas A pointer to a `plutovg_canvas_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_clip_preserve(plutovg_canvas_t* canvas);
+    public static extern unsafe void plutovg_canvas_clip_preserve(plutovg_canvas_t* canvas);
 
     /**
      * @brief Fills a rectangle according to the current fill rule.
@@ -2110,7 +2104,7 @@ public static class PlutoVG
      * @param h The height of the rectangle.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_fill_rect(plutovg_canvas_t* canvas, float x, float y, float w, float h);
+    public static extern unsafe void plutovg_canvas_fill_rect(plutovg_canvas_t* canvas, float x, float y, float w, float h);
 
     /**
      * @brief Fills a path according to the current fill rule.
@@ -2120,7 +2114,7 @@ public static class PlutoVG
      * @param path The `plutovg_path_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_fill_path(plutovg_canvas_t* canvas, /*const*/ plutovg_path_t* path);
+    public static extern unsafe void plutovg_canvas_fill_path(plutovg_canvas_t* canvas, /*const*/ plutovg_path_t* path);
 
     /**
      * @brief Strokes a rectangle with the current stroke settings.
@@ -2133,7 +2127,7 @@ public static class PlutoVG
      * @param h The height of the rectangle.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_stroke_rect(plutovg_canvas_t* canvas, float x, float y, float w, float h);
+    public static extern unsafe void plutovg_canvas_stroke_rect(plutovg_canvas_t* canvas, float x, float y, float w, float h);
 
     /**
      * @brief Strokes a path with the current stroke settings.
@@ -2143,7 +2137,7 @@ public static class PlutoVG
      * @param path The `plutovg_path_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_stroke_path(plutovg_canvas_t* canvas, /*const*/ plutovg_path_t* path);
+    public static extern unsafe void plutovg_canvas_stroke_path(plutovg_canvas_t* canvas, /*const*/ plutovg_path_t* path);
 
     /**
      * @brief Intersects the current clipping region with a rectangle according to the current fill rule.
@@ -2156,7 +2150,7 @@ public static class PlutoVG
      * @param h The height of the rectangle.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_clip_rect(plutovg_canvas_t* canvas, float x, float y, float w, float h);
+    public static extern unsafe void plutovg_canvas_clip_rect(plutovg_canvas_t* canvas, float x, float y, float w, float h);
 
     /**
      * @brief Intersects the current clipping region with a path according to the current fill rule.
@@ -2166,7 +2160,7 @@ public static class PlutoVG
      * @param path The `plutovg_path_t` object.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_clip_path(plutovg_canvas_t* canvas, /*const*/ plutovg_path_t* path);
+    public static extern unsafe void plutovg_canvas_clip_path(plutovg_canvas_t* canvas, /*const*/ plutovg_path_t* path);
 
     /**
      * @brief Adds a glyph to the current path at the specified origin.
@@ -2178,7 +2172,7 @@ public static class PlutoVG
      * @return The advance width of the glyph.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_add_glyph(plutovg_canvas_t* canvas, plutovg_codepoint_t codepoint, float x, float y);
+    public static extern unsafe float plutovg_canvas_add_glyph(plutovg_canvas_t* canvas, plutovg_codepoint_t codepoint, float x, float y);
 
     /**
      * @brief Adds text to the current path at the specified origin.
@@ -2192,7 +2186,7 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_add_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
+    public static extern unsafe float plutovg_canvas_add_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
 
     /**
      * @brief Fills a text at the specified origin.
@@ -2207,7 +2201,7 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_fill_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
+    public static extern unsafe float plutovg_canvas_fill_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
 
     /**
      * @brief Strokes a text at the specified origin.
@@ -2222,7 +2216,7 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_stroke_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
+    public static extern unsafe float plutovg_canvas_stroke_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
 
     /**
      * @brief Intersects the current clipping region with text at the specified origin.
@@ -2237,7 +2231,7 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_clip_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
+    public static extern unsafe float plutovg_canvas_clip_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
 
     /**
      * @brief Retrieves font metrics for the current font.
@@ -2249,7 +2243,7 @@ public static class PlutoVG
      * @param extents The bounding box of the font.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_font_metrics(plutovg_canvas_t* canvas, float* ascent, float* descent, float* line_gap, plutovg_rect_t* extents);
+    public static extern unsafe void plutovg_canvas_font_metrics(plutovg_canvas_t* canvas, float* ascent, float* descent, float* line_gap, plutovg_rect_t* extents);
 
     /**
      * @brief Retrieves metrics for a specific glyph.
@@ -2261,7 +2255,7 @@ public static class PlutoVG
      * @param extents The bounding box of the glyph.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  void plutovg_canvas_glyph_metrics(plutovg_canvas_t* canvas, plutovg_codepoint_t codepoint, float* advance_width, float* left_side_bearing, plutovg_rect_t* extents);
+    public static extern unsafe void plutovg_canvas_glyph_metrics(plutovg_canvas_t* canvas, plutovg_codepoint_t codepoint, float* advance_width, float* left_side_bearing, plutovg_rect_t* extents);
 
     /**
      * @brief Retrieves the extents of a text.
@@ -2274,6 +2268,6 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe  float plutovg_canvas_text_extents(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, plutovg_rect_t* extents);
+    public static extern unsafe float plutovg_canvas_text_extents(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, plutovg_rect_t* extents);
 
 }
