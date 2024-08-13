@@ -241,7 +241,7 @@ internal class Program
             var HighRenderer = new HighLevelRenderer(Settings);
             HighRenderer.Boot(LastFrame);
 
-            var Game = new CharacterController(HighRenderer);
+            var Game = new CharacterController(HighRenderer, LowRenderer);
 
             PerformerStatus PlayerState = new();
             IntPtr GamePad = 0;

@@ -15,6 +15,7 @@ namespace StarMachine;
 class CharacterController
 {
     private HighLevelRenderer HighRenderer;
+    private LowLevelRenderer LowRenderer;
     public float CurrentHeading = 0.0f;
 
     // Units per second
@@ -32,8 +33,9 @@ class CharacterController
     // Degrees per second
     private float TurnSpeed = 30.0f;
 
-    public CharacterController(HighLevelRenderer InHighRenderer)
+    public CharacterController(HighLevelRenderer InHighRenderer, LowLevelRenderer InLowRenderer)
     {
+        LowRenderer = InLowRenderer;
         HighRenderer = InHighRenderer;
     }
 
@@ -70,18 +72,22 @@ class CharacterController
                 PlayerState.Align = false;
             }
         }
+        bool WarpMode = false;
         if (Frame.Number > 0 && Frame.Number <= 120)
         {
+            WarpMode = true;
             float Alpha = (float)(Frame.Number) / 120.0f;
             Alpha = Single.Pow(Alpha, 16.0f);
             LinearVelocity = Vector3.Lerp(Vector3.Zero, FastVelocity, Alpha);
         }
         else if (Frame.Number > 120 && Frame.Number <= 400)
         {
+            WarpMode = true;
             LinearVelocity = FastVelocity;
         }
         else if (Frame.Number > 400 && Frame.Number <= 520)
         {
+            WarpMode = true;
             float Alpha = (float)(Frame.Number - 400) / 120.0f;
             Alpha = Single.Pow(Alpha, 16.0f);
             LinearVelocity = Vector3.Lerp(FastVelocity, WarpVelocity, Alpha);
@@ -127,7 +133,7 @@ class CharacterController
         {
             LinearVelocity += HighRenderer.EyeDir * Acceleration * Seconds * PlayerState.Gas;
         }
-        else
+        else if (!WarpMode)
         {
             LinearVelocity *= 0.99f;
         }
@@ -212,6 +218,12 @@ class CharacterController
             HighRenderer.Tunneling = Math.Clamp(HighRenderer.Tunneling, 0.0f, 1.0f);
             HighRenderer.GrainAlpha = HighRenderer.Tunneling * 0.4f;
             HighRenderer.GrainAlpha *= HighRenderer.GrainAlpha;
+
+            const double ToMilesPerHour = 1.0 / (1609.344 / 3600.0);
+            const double ToSpeedOfLight = 1.0 / (299792458.0);
+            double MetersPerSecond = LinearVelocity.Length() * 0.25;
+            LowRenderer.MilesPerHour = MetersPerSecond * ToMilesPerHour;
+            LowRenderer.SpeedOfLight = Math.Round(MetersPerSecond * ToSpeedOfLight, 4);
         }
     }
 }

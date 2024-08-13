@@ -944,7 +944,7 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe float plutovg_font_face_text_extents(/*const*/ plutovg_font_face_t* face, float size, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, plutovg_rect_t* extents);
+    public static extern unsafe float plutovg_font_face_text_extents(/*const*/ plutovg_font_face_t* face, float size, /*const*/ byte* text, int length, plutovg_text_encoding_t encoding, plutovg_rect_t* extents);
 
     /**
      * @brief Represents an image surface for drawing operations.
@@ -2186,7 +2186,7 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe float plutovg_canvas_add_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
+    public static extern unsafe float plutovg_canvas_add_text(plutovg_canvas_t* canvas, /*const*/ byte* text, int length, plutovg_text_encoding_t encoding, float x, float y);
 
     /**
      * @brief Fills a text at the specified origin.
@@ -2201,7 +2201,7 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe float plutovg_canvas_fill_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
+    public static extern unsafe float plutovg_canvas_fill_text(plutovg_canvas_t* canvas, /*const*/ byte* text, int length, plutovg_text_encoding_t encoding, float x, float y);
 
     /**
      * @brief Strokes a text at the specified origin.
@@ -2216,7 +2216,7 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe float plutovg_canvas_stroke_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
+    public static extern unsafe float plutovg_canvas_stroke_text(plutovg_canvas_t* canvas, /*const*/ byte* text, int length, plutovg_text_encoding_t encoding, float x, float y);
 
     /**
      * @brief Intersects the current clipping region with text at the specified origin.
@@ -2231,7 +2231,7 @@ public static class PlutoVG
      * @return The total advance width of the text.
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
-    public static extern unsafe float plutovg_canvas_clip_text(plutovg_canvas_t* canvas, /*const*/ void* text, int length, plutovg_text_encoding_t encoding, float x, float y);
+    public static extern unsafe float plutovg_canvas_clip_text(plutovg_canvas_t* canvas, /*const*/ byte* text, int length, plutovg_text_encoding_t encoding, float x, float y);
 
     /**
      * @brief Retrieves font metrics for the current font.

@@ -407,13 +407,29 @@ class LowLevelRenderer
     private IntPtr SplatWorldPositionBuffer_H = IntPtr.Zero;
     private IntPtr SplatColorBuffer = IntPtr.Zero;
 
-    public List<ImageOverlay> Overlays = new List<ImageOverlay>();
+    private FontResource Michroma = new("Michroma-Regular.ttf");
+    private ImageOverlay Speedometer;
+    public double MilesPerHour = 0.0; // Current speed
+    public double SpeedOfLight = 0.0; // Current speed
+
+    public List<ImageOverlay> Overlays;
 
     private SplatGenerator SplatMesh;
 
     public LowLevelRenderer(SplatGenerator InSplatMesh)
     {
         SplatMesh = InSplatMesh;
+        Overlays = new List<ImageOverlay>();
+        {
+            Speedometer = new ImageOverlay();
+            Speedometer.ScaleModeX = ImageOverlay.ScaleMode.Aspect;
+            Speedometer.ScaleModeY = ImageOverlay.ScaleMode.Screen;
+            Speedometer.ScaleY = 0.05f;
+            Speedometer.AlignModeX = ImageOverlay.AlignModeH.Center;
+            Speedometer.AlignModeY = ImageOverlay.AlignModeV.Bottom;
+            Speedometer.AlignY = 0.01f;
+            Overlays.Add(Speedometer);
+        }
     }
 
     private IntPtr LoadShader(
@@ -1127,7 +1143,6 @@ class LowLevelRenderer
         {
             float ScreenWidth = (float)ColorTextureDesc.width;
             float ScreenHeight = (float)ColorTextureDesc.height;
-            FontResource Michroma = new("Michroma-Regular.ttf");
 
             {
                 SVGResource TigerSVG = new("tiger.svg");
@@ -1149,6 +1164,14 @@ class LowLevelRenderer
                 Overlays.Add(Overlay);
             }
 
+            {
+                var Overlay = new ImageOverlay(Device, Michroma.Render("hail eris", 0.1f, ScreenHeight));
+                Overlay.ScaleModeX = ImageOverlay.ScaleMode.Aspect;
+                Overlay.ScaleModeY = ImageOverlay.ScaleMode.Screen;
+                Overlay.ScaleY = 0.1f;
+                Overlay.UploadVertices(ScreenWidth, ScreenHeight);
+                Overlays.Add(Overlay);
+            }
         }
 #endif
 
@@ -1221,6 +1244,28 @@ class LowLevelRenderer
         (IntPtr SwapchainTexture, UInt32 Width, UInt32 Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
         if (SwapchainTexture != IntPtr.Zero)
         {
+            {
+                string Text;
+                if (MilesPerHour > 1.0)
+                {
+                    Text = $"{Double.Round(MilesPerHour)} mph";
+                }
+                else if (MilesPerHour > 0.1)
+                {
+                    Text = $"{Double.Round(MilesPerHour, 1)} mph";
+                }
+                else
+                {
+                    Text = $"{Double.Round(MilesPerHour, 2)} mph";
+                }
+                if (SpeedOfLight > 0.0001)
+                {
+                    Text = $"{SpeedOfLight} c, {Text}";
+                }
+                Speedometer.UploadTexture(Device, Michroma.Render(Text, Speedometer.ScaleY * 1.5f, (float)Height));
+                Speedometer.UploadVertices((float)Width, (float)Height);
+            }
+
             ViewInfoUpload ViewInfo;
             {
                 ViewInfo.WorldToView = HighRenderer.WorldToView;
@@ -1400,25 +1445,28 @@ class LowLevelRenderer
                         SDL_GpuSetScissor(OverlayPass, &ScissorRect);
                         foreach (ImageOverlay Overlay in Overlays)
                         {
-                            SDL_GpuBufferBinding VertexBufferBindings;
+                            if (Overlay.Texture != IntPtr.Zero)
                             {
-                                VertexBufferBindings.buffer = Overlay.VertexBuffer;
-                                VertexBufferBindings.offset = 0;
-                            }
+                                SDL_GpuBufferBinding VertexBufferBindings;
+                                {
+                                    VertexBufferBindings.buffer = Overlay.VertexBuffer;
+                                    VertexBufferBindings.offset = 0;
+                                }
 
-                            SDL_GpuTextureSamplerBinding SamplerBindings;
-                            {
-                                SamplerBindings.texture = Overlay.Texture;
-                                SamplerBindings.sampler = Overlay.Sampler;
-                            }
+                                SDL_GpuTextureSamplerBinding SamplerBindings;
+                                {
+                                    SamplerBindings.texture = Overlay.Texture;
+                                    SamplerBindings.sampler = Overlay.Sampler;
+                                }
 
-                            unsafe
-                            {
-                                SDL_GpuBindVertexBuffers(OverlayPass, 0, &VertexBufferBindings, 1);
-                                SDL_GpuBindFragmentSamplers(OverlayPass, 0, &SamplerBindings, 1);
-                            }
+                                unsafe
+                                {
+                                    SDL_GpuBindVertexBuffers(OverlayPass, 0, &VertexBufferBindings, 1);
+                                    SDL_GpuBindFragmentSamplers(OverlayPass, 0, &SamplerBindings, 1);
+                                }
 
-                            SDL_GpuDrawPrimitives(OverlayPass, 0, 4);
+                                SDL_GpuDrawPrimitives(OverlayPass, 0, 4);
+                            }
                         }
                     }
                     SDL_GpuPopDebugGroup(CommandBuffer);

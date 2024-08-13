@@ -1,4 +1,5 @@
 
+using System.Text;
 using System.Runtime.InteropServices;
 using static System.Buffer;
 
@@ -39,6 +40,47 @@ public class FontResource : ResourceBlob
             {
                 plutovg_font_face_destroy(Handle);
             }
+        }
+    }
+
+    public (int W, int H, byte[] Data) Render(string Text, float Scale, float ScreenHeight)
+    {
+        byte[] TextBytes = Encoding.UTF8.GetBytes(Text);
+
+        float FontSize = ScreenHeight * Scale; // Size in pixels.
+        unsafe
+        {
+            plutovg_rect_t BoundingBox;
+            plutovg_surface_t* Surface;
+            plutovg_canvas_t* Canvas;
+            plutovg_text_encoding_t Encoding = plutovg_text_encoding_t.PLUTOVG_TEXT_ENCODING_UTF8;
+
+            fixed (byte* TextPtr = TextBytes)
+            {
+                plutovg_font_face_text_extents(Handle, FontSize, TextPtr, TextBytes.Length, Encoding, &BoundingBox);
+                Surface = plutovg_surface_create((int)Single.Ceil(BoundingBox.w), (int)Single.Ceil(BoundingBox.h));
+                Canvas = plutovg_canvas_create(Surface);
+                plutovg_canvas_set_rgba(Canvas, 1.0f, 1.0f, 1.0f, 1.0f);
+                plutovg_canvas_set_font(Canvas, Handle, FontSize);
+                plutovg_canvas_fill_text(Canvas, TextPtr, TextBytes.Length, Encoding, -BoundingBox.x, -BoundingBox.y);
+            }
+
+            byte* Data = plutovg_surface_get_data(Surface);
+            int Stride = plutovg_surface_get_stride(Surface);
+
+            int SurfaceWidth = plutovg_surface_get_width(Surface);
+            int SurfaceHeight = plutovg_surface_get_height(Surface);
+            int Size = Stride * SurfaceHeight;
+            var Blob = new byte[Size];
+            fixed (byte* BlobPtr = Blob)
+            {
+                MemoryCopy(Data, BlobPtr, Size, Size);
+            }
+
+            plutovg_canvas_destroy(Canvas);
+            plutovg_surface_destroy(Surface);
+
+            return (SurfaceWidth, SurfaceHeight, Blob);
         }
     }
 }
