@@ -58,7 +58,7 @@ public class FontResource : ResourceBlob
             fixed (byte* TextPtr = TextBytes)
             {
                 plutovg_font_face_text_extents(Handle, FontSize, TextPtr, TextBytes.Length, Encoding, &BoundingBox);
-                Surface = plutovg_surface_create((int)Single.Ceil(BoundingBox.w), (int)Single.Ceil(BoundingBox.h));
+                Surface = plutovg_surface_create((int)Single.Ceiling(BoundingBox.w), (int)Single.Ceiling(BoundingBox.h));
                 Canvas = plutovg_canvas_create(Surface);
                 plutovg_canvas_set_rgba(Canvas, 1.0f, 1.0f, 1.0f, 1.0f);
                 plutovg_canvas_set_font(Canvas, Handle, FontSize);
