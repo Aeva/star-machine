@@ -13,6 +13,12 @@ using static System.Buffer;
 using SDL3;
 using static SDL3.SDL;
 
+using PlutoVG;
+using static PlutoVG.PlutoVG;
+
+using PlutoSVG;
+using static PlutoSVG.PlutoSVG;
+
 using FixedInt = FixedPoint.FixedInt;
 using Fixie = FixedPoint.Fixie;
 
@@ -72,12 +78,322 @@ struct ViewInfoUpload
 }
 
 
+class ImageOverlay
+{
+    private IntPtr Device = IntPtr.Zero;
+    public IntPtr Texture = IntPtr.Zero;
+    public IntPtr Sampler = IntPtr.Zero;
+    public IntPtr VertexBuffer = IntPtr.Zero;
+
+    public enum AlignModeH
+    {
+        Left,
+        Right,
+        Center,
+    }
+
+    public enum AlignModeV
+    {
+        Top,
+        Bottom,
+        Center,
+    }
+
+    public enum ScaleMode
+    {
+        Aspect, // Ignore the scale value and maintain aspect ratio.
+        Screen, // Scale is the portion of the screen to cover.
+    }
+
+    private float TextureWidth = 0.0f;
+    private float TextureHeight = 0.0f;
+
+    public AlignModeH AlignModeX = AlignModeH.Center;
+    public float AlignX = 0.0f;
+
+    public AlignModeV AlignModeY = AlignModeV.Bottom;
+    public float AlignY = -0.1f;
+
+    public ScaleMode ScaleModeX = ScaleMode.Screen;
+    public float ScaleX = 0.5f;
+
+    public ScaleMode ScaleModeY = ScaleMode.Aspect;
+    public float ScaleY = 0.5f;
+
+    public ImageOverlay()
+    {
+    }
+
+    public ImageOverlay(IntPtr InDevice, (int W, int H, byte[] Data) Image, float ScreenWidth, float ScreenHeight)
+    {
+        UploadTexture(InDevice, Image);
+        UploadVertices(ScreenWidth, ScreenHeight);
+    }
+
+    public void UploadTexture(IntPtr InDevice, (int W, int H, byte[] Data) Image)
+    {
+        ReleaseTexture();
+        Device = InDevice;
+
+        if (Sampler == IntPtr.Zero)
+        {
+            SDL_GpuSamplerCreateInfo CreateInfo;
+            {
+                CreateInfo.minFilter = SDL.SDL_GpuFilter.SDL_GPU_FILTER_LINEAR;
+                CreateInfo.magFilter = SDL.SDL_GpuFilter.SDL_GPU_FILTER_LINEAR;
+                CreateInfo.mipmapMode = SDL.SDL_GpuSamplerMipmapMode.SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
+                CreateInfo.addressModeU = SDL.SDL_GpuSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+                CreateInfo.addressModeV = SDL.SDL_GpuSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+                CreateInfo.addressModeW = SDL.SDL_GpuSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
+                CreateInfo.mipLodBias = 0.0f;
+                CreateInfo.anisotropyEnable = 0;
+                CreateInfo.maxAnisotropy = 0.0f;
+                CreateInfo.compareEnable = 0;
+                CreateInfo.compareOp = SDL.SDL_GpuCompareOp.SDL_GPU_COMPAREOP_NEVER;
+                CreateInfo.minLod = 0.0f;
+                CreateInfo.maxLod = 0.0f;
+            }
+            unsafe
+            {
+                Sampler = SDL_GpuCreateSampler(Device, &CreateInfo);
+            }
+        }
+
+        TextureWidth = (float)Image.W;
+        TextureHeight = (float)Image.H;
+
+        SDL_GpuTextureCreateInfo Desc;
+        {
+            Desc.width = (uint)Image.W;
+            Desc.height = (uint)Image.H;
+            Desc.depth = 1;
+            Desc.isCube = 0;
+            Desc.layerCount = 1;
+            Desc.levelCount = 1;
+            Desc.sampleCount = SDL.SDL_GpuSampleCount.SDL_GPU_SAMPLECOUNT_1;
+            Desc.format = SDL.SDL_GpuTextureFormat.SDL_GPU_TEXTUREFORMAT_R8G8B8A8;
+            Desc.usageFlags = (uint)SDL.SDL_GpuTextureUsageFlagBits.SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT;
+        }
+
+        unsafe
+        {
+            int UploadSize = Image.Data.Length;
+            Texture = SDL_GpuCreateTexture(Device, &Desc);
+            SDL_GpuSetTextureName(Device, Texture, "SVG Test"u8);
+
+            IntPtr TransferBuffer = SDL_GpuCreateTransferBuffer(
+                Device, SDL.SDL_GpuTransferBufferUsage.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, (uint)UploadSize);
+
+            byte* MappedMemory;
+            SDL_GpuMapTransferBuffer(Device, TransferBuffer, 0, (void**)&MappedMemory);
+            fixed (byte* DataPtr = Image.Data)
+            {
+                MemoryCopy(DataPtr, MappedMemory, UploadSize, UploadSize);
+            }
+            SDL_GpuUnmapTransferBuffer(Device, TransferBuffer);
+
+            IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
+            IntPtr CopyPass = SDL_GpuBeginCopyPass(CommandBuffer);
+
+            SDL_GpuTextureTransferInfo TransferInfo;
+            {
+                TransferInfo.transferBuffer = TransferBuffer;
+                TransferInfo.offset = 0;
+                TransferInfo.imagePitch = Desc.width;
+                TransferInfo.imageHeight = Desc.height;
+            }
+            SDL_GpuTextureRegion Region;
+            {
+                Region.textureSlice.texture = Texture;
+                Region.textureSlice.mipLevel = 0;
+                Region.textureSlice.layer = 0;
+                Region.x = 0;
+                Region.y = 0;
+                Region.z = 0;
+                Region.w = Desc.width;
+                Region.h = Desc.height;
+                Region.d = 1;
+            }
+            SDL_GpuUploadToTexture(CopyPass, &TransferInfo, &Region, 0);
+            SDL_GpuEndCopyPass(CopyPass);
+            SDL_GpuSubmit(CommandBuffer);
+            SDL_GpuReleaseTransferBuffer(Device, TransferBuffer);
+        }
+    }
+
+    public void UploadVertices(float ScreenWidth, float ScreenHeight)
+    {
+        Trace.Assert(Device != IntPtr.Zero);
+        ReleaseVertexBuffer();
+
+        float ScreenMinX = -1.0f;
+        float ScreenMaxX = +1.0f;
+        float ScreenMinY = -1.0f;
+        float ScreenMaxY = +1.0f;
+
+        {
+            float TextureScaleX = 1.0f;
+            float TextureScaleY = 1.0f;
+
+            if (ScaleModeX == ScaleMode.Screen)
+            {
+                TextureScaleX = ScaleX;
+                if (ScaleModeY == ScaleMode.Aspect)
+                {
+                    TextureScaleY = (TextureHeight / TextureWidth) / (ScreenHeight / ScreenWidth) * TextureScaleX;
+                }
+            }
+
+            if (ScaleModeY == ScaleMode.Screen)
+            {
+                TextureScaleY = ScaleY;
+                if (ScaleModeX == ScaleMode.Aspect)
+                {
+                    TextureScaleX = (TextureWidth / TextureHeight) / (ScreenWidth / ScreenHeight) * TextureScaleY;
+                }
+            }
+
+            float SpanX = 2.0f * TextureScaleX;
+            float SpanY = 2.0f * TextureScaleY;
+
+            if (AlignModeX == AlignModeH.Left)
+            {
+                ScreenMinX = Single.Lerp(-1.0f, +1.0f, AlignX);
+                ScreenMaxX = ScreenMinX + SpanX;
+            }
+            else if (AlignModeX == AlignModeH.Right)
+            {
+                ScreenMaxX = Single.Lerp(+1.0f, -1.0f, AlignX);
+                ScreenMinX = ScreenMaxX - SpanX;
+            }
+            else if (AlignModeX == AlignModeH.Center)
+            {
+                ScreenMinX = SpanX * -0.5f;
+                ScreenMaxX = SpanX * +0.5f;
+            }
+
+            if (AlignModeY == AlignModeV.Top)
+            {
+                ScreenMaxY = Single.Lerp(+1.0f, -1.0f, AlignY);
+                ScreenMinY = ScreenMaxY - SpanY;
+            }
+            else if (AlignModeY == AlignModeV.Bottom)
+            {
+                ScreenMinY = Single.Lerp(-1.0f, +1.0f, AlignY);
+                ScreenMaxY = ScreenMinY + SpanY;
+            }
+            else if (AlignModeY == AlignModeV.Center)
+            {
+                ScreenMinY = SpanY * -0.5f;
+                ScreenMaxY = SpanY * +0.5f;
+            }
+        }
+
+        Span<float> Data = stackalloc float[16];
+
+        Data[0x0] = 0.0f; Data[0x1] = 0.0f;
+        Data[0x4] = 0.0f; Data[0x5] = 1.0f;
+        Data[0x8] = 1.0f; Data[0x9] = 0.0f;
+        Data[0xC] = 1.0f; Data[0xD] = 1.0f;
+
+        Data[0x2] = ScreenMinX; Data[0x3] = ScreenMaxY;
+        Data[0x6] = ScreenMinX; Data[0x7] = ScreenMinY;
+        Data[0xA] = ScreenMaxX; Data[0xB] = ScreenMaxY;
+        Data[0xE] = ScreenMaxX; Data[0xF] = ScreenMinY;
+
+        uint UploadSize = sizeof(float) * (uint)Data.Length;
+
+        VertexBuffer = SDL_GpuCreateBuffer(
+            Device,
+            (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+            UploadSize);
+        SDL_GpuSetBufferName(Device, VertexBuffer, "Fnord"u8);
+
+        IntPtr TransferBuffer = SDL_GpuCreateTransferBuffer(
+            Device, SDL_GpuTransferBufferUsage.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, UploadSize);
+
+        unsafe
+        {
+            byte* MappedMemory;
+            SDL_GpuMapTransferBuffer(Device, TransferBuffer, 0, (void**)&MappedMemory);
+            fixed (void* UploadData = Data)
+            {
+                MemoryCopy(UploadData, MappedMemory, UploadSize, UploadSize);
+            }
+            SDL_GpuUnmapTransferBuffer(Device, TransferBuffer);
+        }
+
+        IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
+        IntPtr CopyPass = SDL_GpuBeginCopyPass(CommandBuffer);
+        unsafe
+        {
+            SDL_GpuTransferBufferLocation Source;
+            {
+                Source.transferBuffer = TransferBuffer;
+                Source.offset = 0;
+            }
+            SDL_GpuBufferRegion Dest;
+            {
+                Dest.buffer = VertexBuffer;
+                Dest.offset = 0;
+                Dest.size = UploadSize;
+            }
+            SDL_GpuUploadToBuffer(CopyPass, &Source, &Dest, 0);
+        }
+        SDL_GpuEndCopyPass(CopyPass);
+        SDL_GpuSubmit(CommandBuffer);
+        SDL_GpuReleaseTransferBuffer(Device, TransferBuffer);
+    }
+
+    public void ReleaseTexture()
+    {
+        if (Texture != IntPtr.Zero)
+        {
+            SDL_GpuReleaseTexture(Device, Texture);
+            Texture = IntPtr.Zero;
+        }
+    }
+
+    public void ReleaseSampler()
+    {
+        if (Sampler != IntPtr.Zero)
+        {
+            SDL_GpuReleaseSampler(Device, Sampler);
+            Sampler = IntPtr.Zero;
+        }
+    }
+
+    public void ReleaseVertexBuffer()
+    {
+        if (VertexBuffer != IntPtr.Zero)
+        {
+            SDL_GpuReleaseBuffer(Device, VertexBuffer);
+            VertexBuffer = IntPtr.Zero;
+        }
+    }
+
+    public void Release()
+    {
+        ReleaseTexture();
+        ReleaseSampler();
+        ReleaseVertexBuffer();
+    }
+
+    ~ImageOverlay()
+    {
+        Trace.Assert(Texture == IntPtr.Zero);
+        Trace.Assert(VertexBuffer == IntPtr.Zero);
+    }
+}
+
+
 class LowLevelRenderer
 {
     public IntPtr Window = IntPtr.Zero;
     private IntPtr Device = IntPtr.Zero;
     private IntPtr SurfelPipeline = IntPtr.Zero;
     private IntPtr RevealPipeline = IntPtr.Zero;
+    private IntPtr OverlayPipeline = IntPtr.Zero;
     private IntPtr ColorTexture = IntPtr.Zero;
     private IntPtr DepthTexture = IntPtr.Zero;
     private IntPtr SplatVertexBuffer = IntPtr.Zero;
@@ -85,6 +401,8 @@ class LowLevelRenderer
     private IntPtr SplatWorldPositionBuffer_L = IntPtr.Zero;
     private IntPtr SplatWorldPositionBuffer_H = IntPtr.Zero;
     private IntPtr SplatColorBuffer = IntPtr.Zero;
+
+    public List<ImageOverlay> Overlays = new List<ImageOverlay>();
 
     private SplatGenerator SplatMesh;
 
@@ -229,6 +547,11 @@ class LowLevelRenderer
 
     public bool Boot(RenderingConfig Settings)
     {
+        {
+            Console.WriteLine($"PlutoVG {plutovg_version_string()}");
+            Console.WriteLine($"PlutoSVG {plutosvg_version_string()}");
+        }
+
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) < 0)
         {
             Console.WriteLine("SDL3 initialization failed.");
@@ -625,6 +948,112 @@ class LowLevelRenderer
             SDL_GpuReleaseShader(Device, VertexShader);
         }
 
+        {
+            var VertexShader = LoadShader("DrawOverlay.vs.spirv", SDL_GpuShaderStage.SDL_GPU_SHADERSTAGE_VERTEX, 0, 0, 0, 0);
+            if (VertexShader == IntPtr.Zero)
+            {
+                SDL_GpuUnclaimWindow(Device, Window);
+                SDL_GpuDestroyDevice(Device);
+                SDL_DestroyWindow(Window);
+                Console.WriteLine("Failed to create vertex shader.");
+                return true;
+            }
+
+            var FragmentShader = LoadShader("DrawOverlay.fs.spirv", SDL_GpuShaderStage.SDL_GPU_SHADERSTAGE_FRAGMENT, 1, 0, 0, 0);
+            if (VertexShader == IntPtr.Zero)
+            {
+                SDL_GpuReleaseShader(Device, VertexShader);
+                SDL_GpuUnclaimWindow(Device, Window);
+                SDL_GpuDestroyDevice(Device);
+                SDL_DestroyWindow(Window);
+                Console.WriteLine("Failed to create fragment shader.");
+                return true;
+            }
+
+            unsafe
+            {
+                var BlendState = new SDL_GpuColorAttachmentBlendState();
+                BlendState.blendEnable = 1;
+                BlendState.alphaBlendOp = SDL_GpuBlendOp.SDL_GPU_BLENDOP_ADD;
+                BlendState.colorBlendOp = SDL_GpuBlendOp.SDL_GPU_BLENDOP_ADD;
+                BlendState.colorWriteMask = 0xF;
+                BlendState.srcColorBlendFactor = SDL_GpuBlendFactor.SDL_GPU_BLENDFACTOR_SRC_ALPHA;
+                BlendState.dstColorBlendFactor = SDL_GpuBlendFactor.SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+                BlendState.srcAlphaBlendFactor = SDL_GpuBlendFactor.SDL_GPU_BLENDFACTOR_ONE;
+                BlendState.dstAlphaBlendFactor = SDL_GpuBlendFactor.SDL_GPU_BLENDFACTOR_ZERO;
+
+                const int ColorDescCount = 1;
+                SDL_GpuColorAttachmentDescription* ColorDesc = stackalloc SDL_GpuColorAttachmentDescription[ColorDescCount];
+                {
+                    ColorDesc[0].format = SDL_GpuGetSwapchainTextureFormat(Device, Window);
+                    ColorDesc[0].blendState = BlendState;
+                }
+
+                SDL_GpuGraphicsPipelineAttachmentInfo AttachmentInfo = new();
+                {
+                    AttachmentInfo.colorAttachmentCount = 1;
+                    AttachmentInfo.colorAttachmentDescriptions = ColorDesc;
+                    AttachmentInfo.hasDepthStencilAttachment = 0;
+                    AttachmentInfo.depthStencilFormat = SDL.SDL_GpuTextureFormat.SDL_GPU_TEXTUREFORMAT_INVALID;
+                }
+
+                const int VertexBindingCount = 1;
+                SDL_GpuVertexBinding* VertexBindings = stackalloc SDL_GpuVertexBinding[VertexBindingCount];
+                {
+                    // "InVertex"
+                    VertexBindings[0].binding = 0;
+                    VertexBindings[0].stride = (uint)sizeof(Vector4);
+                    VertexBindings[0].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_VERTEX;
+                    VertexBindings[0].stepRate = 0;
+                }
+
+                const int VertexAttributeCount = 1;
+                SDL_GpuVertexAttribute* VertexAttributes = stackalloc SDL_GpuVertexAttribute[VertexAttributeCount];
+                {
+                    // "InVertex"
+                    VertexAttributes[0].location = 0;
+                    VertexAttributes[0].binding = 0;
+                    VertexAttributes[0].format = SDL_GpuVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_VECTOR4;
+                    VertexAttributes[0].offset = 0;
+                }
+
+                SDL_GpuVertexInputState VertexInputState = new();
+                {
+                    VertexInputState.vertexBindingCount = VertexBindingCount;
+                    VertexInputState.vertexBindings = VertexBindings;
+                    VertexInputState.vertexAttributeCount = VertexAttributeCount;
+                    VertexInputState.vertexAttributes = VertexAttributes;
+                }
+
+                SDL_GpuDepthStencilState DepthStencilState = new();
+                {
+                    DepthStencilState.depthTestEnable = 0;
+                    DepthStencilState.depthWriteEnable = 0;
+                    DepthStencilState.compareOp = SDL.SDL_GpuCompareOp.SDL_GPU_COMPAREOP_NEVER;
+                    DepthStencilState.stencilTestEnable = 0;
+                }
+
+                SDL_GpuGraphicsPipelineCreateInfo PipelineCreateInfo;
+                {
+                    PipelineCreateInfo.vertexShader = VertexShader;
+                    PipelineCreateInfo.fragmentShader = FragmentShader;
+                    PipelineCreateInfo.vertexInputState = VertexInputState;
+                    PipelineCreateInfo.primitiveType = SDL_GpuPrimitiveType.SDL_GPU_PRIMITIVETYPE_TRIANGLESTRIP;
+                    PipelineCreateInfo.rasterizerState.fillMode = SDL_GpuFillMode.SDL_GPU_FILLMODE_FILL;
+                    PipelineCreateInfo.rasterizerState.cullMode = SDL_GpuCullMode.SDL_GPU_CULLMODE_NONE;
+                    PipelineCreateInfo.rasterizerState.frontFace = SDL_GpuFrontFace.SDL_GPU_FRONTFACE_CLOCKWISE;
+                    PipelineCreateInfo.depthStencilState = DepthStencilState;
+                    PipelineCreateInfo.multisampleState.sampleMask = 0xFFFF;
+                    PipelineCreateInfo.attachmentInfo = AttachmentInfo;
+                }
+
+                OverlayPipeline = SDL_GpuCreateGraphicsPipeline(Device, &PipelineCreateInfo);
+            }
+
+            SDL_GpuReleaseShader(Device, FragmentShader);
+            SDL_GpuReleaseShader(Device, VertexShader);
+        }
+
         if (SurfelPipeline == IntPtr.Zero)
         {
             SDL_GpuUnclaimWindow(Device, Window);
@@ -635,6 +1064,15 @@ class LowLevelRenderer
         }
 
         if (RevealPipeline == IntPtr.Zero)
+        {
+            SDL_GpuUnclaimWindow(Device, Window);
+            SDL_GpuDestroyDevice(Device);
+            SDL_DestroyWindow(Window);
+            Console.WriteLine("Failed to create raster pipeline.");
+            return true;
+        }
+
+        if (OverlayPipeline == IntPtr.Zero)
         {
             SDL_GpuUnclaimWindow(Device, Window);
             SDL_GpuDestroyDevice(Device);
@@ -680,6 +1118,17 @@ class LowLevelRenderer
             SDL_GpuSetBufferName(Device, SplatColorBuffer, "SplatColorBuffer"u8);
         }
 
+#if false
+        {
+            float ScreenWidth = (float)ColorTextureDesc.width;
+            float ScreenHeight = (float)ColorTextureDesc.height;
+            FontResource Michroma = new("Michroma-Regular.ttf");
+            SVGResource CameraSVG = new("Digital_Camera.svg");
+            var TestOverlay = new ImageOverlay(Device, CameraSVG.Render(), ScreenWidth, ScreenHeight);
+            Overlays.Add(TestOverlay);
+        }
+#endif
+
         Console.WriteLine("Ignition successful.");
         return false;
     }
@@ -712,6 +1161,12 @@ class LowLevelRenderer
     {
         if (Device != IntPtr.Zero)
         {
+            foreach (ImageOverlay Overlay in Overlays)
+            {
+                Overlay.Release();
+            }
+            Overlays.Clear();
+
             MaybeReleaseBuffer(SplatColorBuffer);
             MaybeReleaseBuffer(SplatWorldPositionBuffer_L);
             MaybeReleaseBuffer(SplatWorldPositionBuffer_H);
@@ -721,6 +1176,7 @@ class LowLevelRenderer
             MaybeReleaseTexture(DepthTexture);
             MaybeReleaseReleaseGraphicsPipeline(SurfelPipeline);
             MaybeReleaseReleaseGraphicsPipeline(RevealPipeline);
+            MaybeReleaseReleaseGraphicsPipeline(OverlayPipeline);
             SDL_GpuUnclaimWindow(Device, Window);
             SDL_GpuDestroyDevice(Device);
             SDL_DestroyWindow(Window);
@@ -791,24 +1247,6 @@ class LowLevelRenderer
                 ScissorRect.h = (int)Height;
             }
 
-            Span<SDL_GpuBufferBinding> VertexBufferBindings = stackalloc SDL_GpuBufferBinding[4];
-            {
-                VertexBufferBindings[0].buffer = SplatVertexBuffer;
-                VertexBufferBindings[0].offset = 0;
-                VertexBufferBindings[1].buffer = SplatWorldPositionBuffer_L;
-                VertexBufferBindings[1].offset = 0;
-                VertexBufferBindings[2].buffer = SplatWorldPositionBuffer_H;
-                VertexBufferBindings[2].offset = 0;
-                VertexBufferBindings[3].buffer = SplatColorBuffer;
-                VertexBufferBindings[3].offset = 0;
-            }
-
-            SDL_GpuBufferBinding IndexBufferBinding;
-            {
-                IndexBufferBinding.buffer = SplatIndexBuffer;
-                IndexBufferBinding.offset = 0;
-            }
-
             unsafe
             {
                 SDL_GpuPushVertexUniformData(CommandBuffer, 0, &ViewInfo, (uint)sizeof(ViewInfoUpload));
@@ -836,6 +1274,24 @@ class LowLevelRenderer
                         DepthStencilAttachmentInfo.stencilLoadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_DONT_CARE;
                         DepthStencilAttachmentInfo.stencilStoreOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_DONT_CARE;
                         DepthStencilAttachmentInfo.cycle = 0;
+                    }
+
+                    Span<SDL_GpuBufferBinding> VertexBufferBindings = stackalloc SDL_GpuBufferBinding[4];
+                    {
+                        VertexBufferBindings[0].buffer = SplatVertexBuffer;
+                        VertexBufferBindings[0].offset = 0;
+                        VertexBufferBindings[1].buffer = SplatWorldPositionBuffer_L;
+                        VertexBufferBindings[1].offset = 0;
+                        VertexBufferBindings[2].buffer = SplatWorldPositionBuffer_H;
+                        VertexBufferBindings[2].offset = 0;
+                        VertexBufferBindings[3].buffer = SplatColorBuffer;
+                        VertexBufferBindings[3].offset = 0;
+                    }
+
+                    SDL_GpuBufferBinding IndexBufferBinding;
+                    {
+                        IndexBufferBinding.buffer = SplatIndexBuffer;
+                        IndexBufferBinding.offset = 0;
                     }
 
                     IntPtr SurfelPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, &DepthStencilAttachmentInfo);
@@ -896,6 +1352,54 @@ class LowLevelRenderer
                     }
                     SDL_GpuPopDebugGroup(CommandBuffer);
                     SDL_GpuEndRenderPass(RevealPass);
+                }
+
+                if (Overlays.Count > 0)
+                {
+                    SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
+                    {
+                        ColorAttachmentInfo.textureSlice.texture = SwapchainTexture;
+                        ColorAttachmentInfo.clearColor.r = 0.0f;
+                        ColorAttachmentInfo.clearColor.g = 0.0f;
+                        ColorAttachmentInfo.clearColor.b = 0.0f;
+                        ColorAttachmentInfo.clearColor.a = 1.0f;
+
+                        ColorAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_LOAD;
+                        ColorAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_STORE;
+                        ColorAttachmentInfo.cycle = 0;
+                    }
+
+                    IntPtr OverlayPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, null);
+                    SDL_GpuPushDebugGroup(CommandBuffer, "Overlay Pass"u8);
+                    {
+                        SDL_GpuBindGraphicsPipeline(OverlayPass, OverlayPipeline);
+                        SDL_GpuSetViewport(OverlayPass, &Viewport);
+                        SDL_GpuSetScissor(OverlayPass, &ScissorRect);
+                        foreach (ImageOverlay Overlay in Overlays)
+                        {
+                            SDL_GpuBufferBinding VertexBufferBindings;
+                            {
+                                VertexBufferBindings.buffer = Overlay.VertexBuffer;
+                                VertexBufferBindings.offset = 0;
+                            }
+
+                            SDL_GpuTextureSamplerBinding SamplerBindings;
+                            {
+                                SamplerBindings.texture = Overlay.Texture;
+                                SamplerBindings.sampler = Overlay.Sampler;
+                            }
+
+                            unsafe
+                            {
+                                SDL_GpuBindVertexBuffers(OverlayPass, 0, &VertexBufferBindings, 1);
+                                SDL_GpuBindFragmentSamplers(OverlayPass, 0, &SamplerBindings, 1);
+                            }
+
+                            SDL_GpuDrawPrimitives(OverlayPass, 0, 4);
+                        }
+                    }
+                    SDL_GpuPopDebugGroup(CommandBuffer);
+                    SDL_GpuEndRenderPass(OverlayPass);
                 }
             }
         }

@@ -141,7 +141,7 @@ public static class PlutoSVG
      */
     [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
     public static extern unsafe plutovg_surface_t* plutosvg_document_render_to_surface(/*const*/ plutosvg_document_t* document, /*const*/ char* id, int width, int height,
-                                                                        /*const*/ plutovg_color_t* current_color, plutosvg_palette_func_t palette_func, void* closure);
+                                                                        /*const*/ plutovg_color_t* current_color, plutosvg_palette_func_t? palette_func, void* closure);
 
     /**
      * @brief Returns the intrinsic width of the SVG document.

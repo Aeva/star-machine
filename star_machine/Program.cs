@@ -5,12 +5,6 @@ using static System.Buffer;
 using SDL3;
 using static SDL3.SDL;
 
-using PlutoVG;
-using static PlutoVG.PlutoVG;
-
-using PlutoSVG;
-using static PlutoSVG.PlutoSVG;
-
 using FixedPointTests = FixedPoint.FixedPointTests;
 
 
@@ -223,14 +217,6 @@ internal class Program
             Console.WriteLine($" - {ResourceName}");
         }
 #endif
-
-        {
-            Console.WriteLine($"PlutoVG {plutovg_version_string()}");
-            Console.WriteLine($"PlutoSVG {plutosvg_version_string()}");
-        }
-
-        FontResource Michroma = new("Michroma-Regular.ttf");
-        SVGResource Camera = new("Digital_Camera.svg");
 
         var SplatMesh = new SplatGenerator(Settings);
         var LowRenderer = new LowLevelRenderer(SplatMesh);

@@ -35,7 +35,7 @@ public class BlobHelper
 
 public class ResourceBlob : BlobHelper
 {
-    public string ResourceName;
+    public string ResourceName = "Uninitialized Resource Name";
 
     protected void MallocResource(string ResourceHint)
     {
