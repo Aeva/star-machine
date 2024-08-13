@@ -111,17 +111,22 @@ class ImageOverlay
     public AlignModeH AlignModeX = AlignModeH.Center;
     public float AlignX = 0.0f;
 
-    public AlignModeV AlignModeY = AlignModeV.Bottom;
-    public float AlignY = -0.1f;
+    public AlignModeV AlignModeY = AlignModeV.Center;
+    public float AlignY = 0.0f;
 
     public ScaleMode ScaleModeX = ScaleMode.Screen;
-    public float ScaleX = 0.5f;
+    public float ScaleX = 1.0f;
 
     public ScaleMode ScaleModeY = ScaleMode.Aspect;
-    public float ScaleY = 0.5f;
+    public float ScaleY = 1.0f;
 
     public ImageOverlay()
     {
+    }
+
+    public ImageOverlay(IntPtr InDevice, (int W, int H, byte[] Data) Image)
+    {
+        UploadTexture(InDevice, Image);
     }
 
     public ImageOverlay(IntPtr InDevice, (int W, int H, byte[] Data) Image, float ScreenWidth, float ScreenHeight)
@@ -1123,9 +1128,27 @@ class LowLevelRenderer
             float ScreenWidth = (float)ColorTextureDesc.width;
             float ScreenHeight = (float)ColorTextureDesc.height;
             FontResource Michroma = new("Michroma-Regular.ttf");
-            SVGResource CameraSVG = new("tiger.svg");
-            var TestOverlay = new ImageOverlay(Device, CameraSVG.Render(), ScreenWidth, ScreenHeight);
-            Overlays.Add(TestOverlay);
+
+            {
+                SVGResource TigerSVG = new("tiger.svg");
+                var Overlay = new ImageOverlay(Device, TigerSVG.Render((int)ScreenWidth, -1));
+                Overlay.AlignModeY = ImageOverlay.AlignModeV.Top;
+                Overlay.AlignY = -0.0f;
+                Overlay.ScaleX = 0.5f;
+                Overlay.UploadVertices(ScreenWidth, ScreenHeight);
+                Overlays.Add(Overlay);
+            }
+
+            {
+                SVGResource CameraSVG = new("Digital_Camera.svg");
+                var Overlay = new ImageOverlay(Device, CameraSVG.Render((int)ScreenWidth, -1));
+                Overlay.AlignModeY = ImageOverlay.AlignModeV.Bottom;
+                Overlay.AlignY = -0.15f;
+                Overlay.ScaleX = 0.75f;
+                Overlay.UploadVertices(ScreenWidth, ScreenHeight);
+                Overlays.Add(Overlay);
+            }
+
         }
 #endif
 
