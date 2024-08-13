@@ -7,3 +7,4 @@ obj
 .DS_Store
 *.kate-swp
 *.spirv
+third_party/unknown_author/*

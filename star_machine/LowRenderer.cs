@@ -171,7 +171,7 @@ class ImageOverlay
             Desc.layerCount = 1;
             Desc.levelCount = 1;
             Desc.sampleCount = SDL.SDL_GpuSampleCount.SDL_GPU_SAMPLECOUNT_1;
-            Desc.format = SDL.SDL_GpuTextureFormat.SDL_GPU_TEXTUREFORMAT_R8G8B8A8;
+            Desc.format = SDL.SDL_GpuTextureFormat.SDL_GPU_TEXTUREFORMAT_B8G8R8A8;
             Desc.usageFlags = (uint)SDL.SDL_GpuTextureUsageFlagBits.SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT;
         }
 
@@ -1123,7 +1123,7 @@ class LowLevelRenderer
             float ScreenWidth = (float)ColorTextureDesc.width;
             float ScreenHeight = (float)ColorTextureDesc.height;
             FontResource Michroma = new("Michroma-Regular.ttf");
-            SVGResource CameraSVG = new("Digital_Camera.svg");
+            SVGResource CameraSVG = new("tiger.svg");
             var TestOverlay = new ImageOverlay(Device, CameraSVG.Render(), ScreenWidth, ScreenHeight);
             Overlays.Add(TestOverlay);
         }
