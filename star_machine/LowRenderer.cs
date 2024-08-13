@@ -1246,7 +1246,11 @@ class LowLevelRenderer
         {
             {
                 string Text;
-                if (MilesPerHour > 1.0)
+                if (SpeedOfLight > 0.0001)
+                {
+                    Text = $"{SpeedOfLight} c";
+                }
+                else if (MilesPerHour > 1.0)
                 {
                     Text = $"{Double.Round(MilesPerHour)} mph";
                 }
@@ -1257,10 +1261,6 @@ class LowLevelRenderer
                 else
                 {
                     Text = $"{Double.Round(MilesPerHour, 2)} mph";
-                }
-                if (SpeedOfLight > 0.0001)
-                {
-                    Text = $"{SpeedOfLight} c, {Text}";
                 }
                 Speedometer.UploadTexture(Device, Michroma.Render(Text, Speedometer.ScaleY * 1.5f, (float)Height));
                 Speedometer.UploadVertices((float)Width, (float)Height);
