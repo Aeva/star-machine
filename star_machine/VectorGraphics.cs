@@ -57,12 +57,17 @@ public class FontResource : ResourceBlob
 
             fixed (byte* TextPtr = TextBytes)
             {
-                plutovg_font_face_text_extents(Handle, FontSize, TextPtr, TextBytes.Length, Encoding, &BoundingBox);
-                Surface = plutovg_surface_create((int)Single.Ceiling(BoundingBox.w), (int)Single.Ceiling(BoundingBox.h));
+                float Ascent;
+                float Descent;
+                float LineGap;
+                plutovg_font_face_get_metrics(Handle, FontSize, &Ascent, &Descent, &LineGap, &BoundingBox);
+
+                float Advance = plutovg_font_face_text_extents(Handle, FontSize, TextPtr, TextBytes.Length, Encoding, &BoundingBox);
+                Surface = plutovg_surface_create((int)Single.Floor(BoundingBox.w), (int)Single.Ceiling(FontSize));
                 Canvas = plutovg_canvas_create(Surface);
                 plutovg_canvas_set_rgba(Canvas, 1.0f, 1.0f, 1.0f, 1.0f);
                 plutovg_canvas_set_font(Canvas, Handle, FontSize);
-                plutovg_canvas_fill_text(Canvas, TextPtr, TextBytes.Length, Encoding, -BoundingBox.x, -BoundingBox.y);
+                plutovg_canvas_fill_text(Canvas, TextPtr, TextBytes.Length, Encoding, Single.Floor(-BoundingBox.x), Ascent + Descent);
             }
 
             byte* Data = plutovg_surface_get_data(Surface);
