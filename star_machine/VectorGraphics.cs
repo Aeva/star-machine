@@ -1,5 +1,6 @@
 
 using System.Text;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using static System.Buffer;
 
@@ -16,6 +17,149 @@ using Moloch;
 using static Moloch.BlobHelper;
 
 namespace StarMachine;
+
+
+public class WidgetAnchor
+{
+    // Anchors for translating coordinate systems.
+    // The coordinates are relative to the center of the parent widget.
+    public float X = 0.0f;
+    public float Y = 0.0f;
+    public List<BaseWidget> Attachments = new();
+
+    public void SetXY(float InX, float InY)
+    {
+        X = InX;
+        Y = InY;
+    }
+}
+
+
+public class BaseWidget : IComparable<BaseWidget>
+{
+    // Set false to skip rendering and updates for this widget and all of it's attachments.
+    public bool Visible = true;
+
+    // Widgets are drawn depth-first.  This hint is used to determine the drawing order of widgets in the same generation.
+    public int OrderHint = 0;
+
+    public int CompareTo(BaseWidget? Other)
+    {
+        if (Other == null)
+        {
+            return -1;
+        }
+        else
+        {
+            return OrderHint.CompareTo(Other.OrderHint);
+        }
+    }
+
+    // Returns a list containing this widget's anchors.
+    public List<WidgetAnchor> GatherAnchors()
+    {
+        var Anchors = new List<WidgetAnchor>();
+        foreach (var Field in GetType().GetFields())
+        {
+            if (Field.FieldType == typeof(WidgetAnchor))
+            {
+                object? Value = Field.GetValue(this);
+                if (Value != null)
+                {
+                    var Anchor = (WidgetAnchor)Value;
+                    Anchors.Add(Anchor);
+                }
+            }
+        }
+
+        return Anchors;
+    }
+
+    // Recursively build the list of all widgets sorted in drawing order.
+    public List<(BaseWidget, int)> GatherWidgets()
+    {
+        List<WidgetAnchor> Anchors = GatherAnchors();
+
+        var Attachments = new List<BaseWidget>();
+        foreach (var Anchor in Anchors)
+        {
+            Attachments.AddRange(Anchor.Attachments);
+        }
+        Attachments.Sort();
+
+        var Gathered = new List<(BaseWidget, int)>();
+        foreach (var Widget in Attachments)
+        {
+            List<(BaseWidget, int)> Descents = Widget.GatherWidgets();
+            Gathered.Add((Widget, Descents.Count));
+            Gathered.AddRange(Descents);
+        }
+
+        return Gathered;
+    }
+}
+
+
+public class RootWidget : BaseWidget
+{
+    // The root widget represents the screen.
+
+    public WidgetAnchor TopLeft = new();
+    public WidgetAnchor TopCenter = new();
+    public WidgetAnchor TopRight = new();
+    public WidgetAnchor CenterLeft = new();
+    public WidgetAnchor Center = new();
+    public WidgetAnchor CenterRight = new();
+    public WidgetAnchor BottomLeft = new();
+    public WidgetAnchor BottomCenter = new();
+    public WidgetAnchor BottomRight = new();
+
+    // The grid is set up such that 1 grid unit is 5% of the vertical resolution, which is the recommended
+    // line height for text to ensure excellent readability for players sitting at a reasonable distance away from the screen.
+    private const float Grid = 20.0f;
+    private const float GridDivisor = Grid / 2.0f;
+
+    // The last known screen dimensions are cached to help determine if we need to update the widget graph.
+    private float CachedWidth = -1.0f;
+    private float CachedHeight = -1.0f;
+
+    // The current conversion from grid space to NDC space.
+    private float DivisorX = 0.0f;
+    private float DivisorY = 0.0f;
+
+    // The list of all widgets attached to the screen.
+    private List<(BaseWidget, int)> DrawOrder = new();
+
+    public void Refresh(float ScreenWidth, float ScreenHeight)
+    {
+        if (CachedWidth != ScreenWidth || CachedHeight != ScreenHeight)
+        {
+            CachedWidth = ScreenWidth;
+            CachedHeight = ScreenHeight;
+
+            float Aspect = (ScreenWidth / ScreenHeight);
+            DivisorX = GridDivisor * Aspect;
+            DivisorY = GridDivisor;
+
+            TopLeft.SetXY(-DivisorX, DivisorY);
+            TopCenter.SetXY(0.0f, DivisorY);
+            TopRight.SetXY(DivisorX, DivisorY);
+
+            CenterLeft.SetXY(-DivisorX, 0.0f);
+            Center.SetXY(0.0f, 0.0f);
+            CenterRight.SetXY(DivisorX, 0.0f);
+
+            BottomLeft.SetXY(-DivisorX, -DivisorY);
+            BottomCenter.SetXY(0.0f, -DivisorY);
+            BottomRight.SetXY(DivisorX, -DivisorY);
+        }
+    }
+
+    public void Rebuild()
+    {
+        DrawOrder = GatherWidgets();
+    }
+}
 
 
 public class FontResource : ResourceBlob
