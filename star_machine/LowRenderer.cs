@@ -395,7 +395,7 @@ class ImageOverlay
 class LowLevelRenderer
 {
     public IntPtr Window = IntPtr.Zero;
-    private IntPtr Device = IntPtr.Zero;
+    public IntPtr Device = IntPtr.Zero;
     private IntPtr SurfelPipeline = IntPtr.Zero;
     private IntPtr RevealPipeline = IntPtr.Zero;
     private IntPtr OverlayPipeline = IntPtr.Zero;
@@ -409,6 +409,9 @@ class LowLevelRenderer
 
     private FontResource Michroma = new("Michroma-Regular.ttf");
     private ImageOverlay Speedometer;
+
+    public RootWidget? Overlay = null;
+
     public double MilesPerHour = 0.0; // Current speed
     public double SpeedOfLight = 0.0; // Current speed
 
@@ -1205,6 +1208,11 @@ class LowLevelRenderer
 
     public void Teardown()
     {
+        if (Overlay != null)
+        {
+            Overlay.PropagateRelease();
+        }
+
         if (Device != IntPtr.Zero)
         {
             foreach (ImageOverlay Overlay in Overlays)
@@ -1244,6 +1252,11 @@ class LowLevelRenderer
         (IntPtr SwapchainTexture, UInt32 Width, UInt32 Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
         if (SwapchainTexture != IntPtr.Zero)
         {
+            if (Overlay != null)
+            {
+                Overlay.Advance(Frame);
+            }
+
             {
                 string Text;
                 if (SpeedOfLight > 0.0001)
@@ -1443,6 +1456,12 @@ class LowLevelRenderer
                         SDL_GpuBindGraphicsPipeline(OverlayPass, OverlayPipeline);
                         SDL_GpuSetViewport(OverlayPass, &Viewport);
                         SDL_GpuSetScissor(OverlayPass, &ScissorRect);
+
+                        if (Overlay != null)
+                        {
+                            Overlay.Draw(OverlayPass);
+                        }
+
                         foreach (ImageOverlay Overlay in Overlays)
                         {
                             if (Overlay.Texture != IntPtr.Zero)

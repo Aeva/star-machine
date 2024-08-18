@@ -260,6 +260,14 @@ internal class Program
 
             SDL.SDL_HideCursor();
 
+#if false
+            var Screen = new RootWidget();
+            Screen.Center.Attachments.Add(new SvgWidget(LowRenderer.Device, "Digital_Camera.svg"));
+            Screen.Rebuild();
+
+            LowRenderer.Overlay = Screen;
+#endif
+
             while (!Halt)
             {
                 ThisFrame.Start = DateTime.UtcNow.Ticks;
