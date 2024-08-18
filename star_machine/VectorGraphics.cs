@@ -3,6 +3,8 @@ using System.Text;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using static System.Buffer;
+using Vector2 = System.Numerics.Vector2;
+using Vector3 = System.Numerics.Vector3;
 using Matrix3x2 = System.Numerics.Matrix3x2;
 
 using SDL3;
@@ -25,6 +27,37 @@ using System.Diagnostics.CodeAnalysis;
 namespace StarMachine;
 
 
+public readonly record struct GridParameters
+{
+    // The grid is set up such that 1 grid unit is 5% of the vertical resolution, which is the recommended
+    // line height for text to ensure excellent readability for players sitting at a reasonable distance away from the screen.
+    public const float Grid = 20.0f;
+    public const float GridDivisor = Grid / 2.0f;
+
+    // The current conversion from grid space to NDC space.
+    public readonly float DivisorX;
+    public readonly float DivisorY;
+
+    // Pixels per grid unit.
+    public readonly float PixelDensity;
+
+    public GridParameters()
+    {
+        DivisorX = 0.0f;
+        DivisorY = 0.0f;
+        PixelDensity = -1.0f;
+    }
+
+    public GridParameters(float ScreenWidth, float ScreenHeight)
+    {
+        float Aspect = (ScreenWidth / ScreenHeight);
+        DivisorX = GridDivisor * Aspect;
+        DivisorY = GridDivisor;
+        PixelDensity = ScreenHeight / Grid;
+    }
+}
+
+
 public class WidgetAnchor
 {
     // Anchors for translating coordinate systems.
@@ -37,12 +70,12 @@ public class WidgetAnchor
         LocalTransform = Matrix3x2.CreateTranslation(OffsetX, OffsetY);
     }
 
-    public void Reflow(Matrix3x2 ParentTransform, float PixelDensity)
+    public void Reflow(Matrix3x2 ParentTransform, GridParameters NewGrid)
     {
         Matrix3x2 RootTransform = LocalTransform * ParentTransform;
         foreach (var Widget in Attachments)
         {
-            Widget.Reflow(RootTransform, PixelDensity);
+            Widget.Reflow(RootTransform, NewGrid);
         }
     }
 
@@ -58,8 +91,13 @@ public class WidgetAnchor
 
 public abstract class BaseWidget : IComparable<BaseWidget>
 {
-    // Local transform for the widget.
-    public Matrix3x2 LocalTransform = Matrix3x2.Identity;
+    // Size in grid units.
+    public float GridWidth = 1.0f;
+    public float GridHeight = 1.0f;
+
+    // Widget placement relative to its anchor.  This describes a point within the bounding box from -1.0 to 1.0.
+    public float AlignX = 0.0f;
+    public float AlignY = 0.0f;
 
     // Set false to skip rendering and updates for this widget and all of it's attachments.
     public bool Visible = true;
@@ -67,14 +105,17 @@ public abstract class BaseWidget : IComparable<BaseWidget>
     // Widgets are drawn depth-first.  This hint is used to determine the drawing order of widgets in the same generation.
     public int OrderHint = 0;
 
-    // Indicates that the root transform updated.
-    public bool RootTransformChanged = true;
-    public bool PixelDensityChanged = true;
+    // Indicates that data changed and may need to be reuploaded to the GPU.
+    protected bool RootTransformChanged = true;
+    protected bool GridParametersChanged = true;
+
+    // Current Grid Parameters
+    protected GridParameters Grid = new();
 
     public virtual void Advance(FrameInfo Frame)
     {
         RootTransformChanged = false;
-        PixelDensityChanged = false;
+        GridParametersChanged = false;
     }
 
     public virtual void Draw(IntPtr RenderPass)
@@ -83,6 +124,30 @@ public abstract class BaseWidget : IComparable<BaseWidget>
 
     public virtual void Release()
     {
+    }
+
+    public void ResetTransform()
+    {
+        LocalTransform = Matrix3x2.Identity;
+        RootTransform = LocalTransform * ParentTransform;
+        RootTransformChanged = true;
+        ReflowAttachments();
+    }
+
+    public void Move(float X, float Y)
+    {
+        LocalTransform = Matrix3x2.CreateTranslation(X, Y) * LocalTransform;
+        RootTransform = LocalTransform * ParentTransform;
+        RootTransformChanged = true;
+        ReflowAttachments();
+    }
+
+    public void Rotate(float Degrees)
+    {
+        LocalTransform = Matrix3x2.CreateRotation(Single.DegreesToRadians(Degrees)) * LocalTransform;
+        RootTransform = LocalTransform * ParentTransform;
+        RootTransformChanged = true;
+        ReflowAttachments();
     }
 
     // For IComparable
@@ -112,25 +177,26 @@ public abstract class BaseWidget : IComparable<BaseWidget>
         }
     }
 
-    // Pixels per grid unit.
-    public float PixelDensity = 0.0f;
+    //
+    // Local transform for the widget.
+    protected Matrix3x2 LocalTransform = Matrix3x2.Identity;
+    protected Matrix3x2 ParentTransform = Matrix3x2.Identity;
+    protected Matrix3x2 RootTransform = Matrix3x2.Identity;
 
     //
-    public Matrix3x2 RootTransform = Matrix3x2.Identity;
-
-    //
-    public void Reflow(Matrix3x2 ParentTransform, float NewPixelDensity = -1.0f)
+    public void Reflow(Matrix3x2 InParentTransform, GridParameters NewGrid)
     {
-        if (NewPixelDensity > 0.0f && NewPixelDensity != PixelDensity)
+        if (NewGrid != Grid)
         {
-            PixelDensityChanged = true;
-            PixelDensity = NewPixelDensity;
+            GridParametersChanged = true;
+            Grid = NewGrid;
         }
 
+        ParentTransform = InParentTransform;
         RootTransform = LocalTransform * ParentTransform;
         foreach (var Anchor in Anchors)
         {
-            Anchor.Reflow(RootTransform, NewPixelDensity);
+            Anchor.Reflow(RootTransform, NewGrid);
         }
     }
 
@@ -139,7 +205,7 @@ public abstract class BaseWidget : IComparable<BaseWidget>
     {
         foreach (var Anchor in Anchors)
         {
-            Anchor.Reflow(RootTransform, PixelDensity);
+            Anchor.Reflow(RootTransform, Grid);
         }
     }
 
@@ -212,18 +278,9 @@ public class RootWidget : BaseWidget
     public WidgetAnchor BottomCenter = new();
     public WidgetAnchor BottomRight = new();
 
-    // The grid is set up such that 1 grid unit is 5% of the vertical resolution, which is the recommended
-    // line height for text to ensure excellent readability for players sitting at a reasonable distance away from the screen.
-    private const float Grid = 20.0f;
-    private const float GridDivisor = Grid / 2.0f;
-
     // The last known screen dimensions are cached to help determine if we need to update the widget graph.
     private float CachedWidth = -1.0f;
     private float CachedHeight = -1.0f;
-
-    // The current conversion from grid space to NDC space.
-    private float DivisorX = 0.0f;
-    private float DivisorY = 0.0f;
 
     // The list of all widgets attached to the screen.
     private List<(BaseWidget, int)> DrawOrder = new();
@@ -249,23 +306,19 @@ public class RootWidget : BaseWidget
             CachedWidth = ScreenWidth;
             CachedHeight = ScreenHeight;
 
-            float Aspect = (ScreenWidth / ScreenHeight);
-            DivisorX = GridDivisor * Aspect;
-            DivisorY = GridDivisor;
+            Grid = new GridParameters(ScreenWidth, ScreenHeight);
 
-            PixelDensity = ScreenHeight / Grid;
+            TopLeft.ResetTransform(-Grid.DivisorX, Grid.DivisorY);
+            TopCenter.ResetTransform(0.0f, Grid.DivisorY);
+            TopRight.ResetTransform(Grid.DivisorX, Grid.DivisorY);
 
-            TopLeft.ResetTransform(-DivisorX, DivisorY);
-            TopCenter.ResetTransform(0.0f, DivisorY);
-            TopRight.ResetTransform(DivisorX, DivisorY);
-
-            CenterLeft.ResetTransform(-DivisorX, 0.0f);
+            CenterLeft.ResetTransform(-Grid.DivisorX, 0.0f);
             Center.ResetTransform(0.0f, 0.0f);
-            CenterRight.ResetTransform(DivisorX, 0.0f);
+            CenterRight.ResetTransform(Grid.DivisorX, 0.0f);
 
-            BottomLeft.ResetTransform(-DivisorX, -DivisorY);
-            BottomCenter.ResetTransform(0.0f, -DivisorY);
-            BottomRight.ResetTransform(DivisorX, -DivisorY);
+            BottomLeft.ResetTransform(-Grid.DivisorX, -Grid.DivisorY);
+            BottomCenter.ResetTransform(0.0f, -Grid.DivisorY);
+            BottomRight.ResetTransform(Grid.DivisorX, -Grid.DivisorY);
 
             ReflowAttachments();
         }
@@ -381,6 +434,8 @@ public class SVGResource : ResourceBlob
     private bool Rendered = false;
     private (int W, int H) RenderedSize = (-1, -1);
     private (int W, int H, byte[] Data) Cached;
+    public float DocumentWidth = 0.0f;
+    public float DocumentHeight = 0.0f;
 
     public (int W, int H, byte[] Data) Render(int RequestWidth=-1, int RequestHeight=-1)
     {
@@ -420,6 +475,8 @@ public class SVGResource : ResourceBlob
         {
             void* VoidStar = Ptr.ToPointer();
             Handle = plutosvg_document_load_from_data(VoidStar, Size, -1, -1, FreeCallback, VoidStar);
+            DocumentWidth = plutosvg_document_get_width(Handle);
+            DocumentHeight = plutosvg_document_get_height(Handle);
         }
     }
 
@@ -444,9 +501,6 @@ public class SvgWidget : BaseWidget
     public IntPtr VertexBuffer = IntPtr.Zero;
     public SVGResource Resource;
 
-    public float GridWidth = 1.0f;
-    public float GridHeight = 1.0f;
-
     public int PixelWidth = 0;
     public int PixelHeight = 0;
 
@@ -455,20 +509,37 @@ public class SvgWidget : BaseWidget
         return typeof(SvgWidget).GetFields();
     }
 
-    public SvgWidget(IntPtr InDevice, string ResourceName)
+    public SvgWidget(IntPtr InDevice, string ResourceName, float InGridWidth = -1.0f, float InGridHeight=-1.0f)
     {
         Device = InDevice;
         Resource = new SVGResource(ResourceName);
+
+        GridWidth = InGridWidth;
+        GridHeight = InGridHeight;
+
+        if (GridHeight < 0.0f && GridWidth < 0.0f)
+        {
+            GridHeight = 1.0f;
+        }
+
+        if (GridWidth < 0.0f)
+        {
+            GridWidth = (Resource.DocumentWidth / Resource.DocumentHeight) * GridHeight;
+        }
+
+        if (GridHeight < 0.0f)
+        {
+            GridHeight = (Resource.DocumentHeight / Resource.DocumentWidth) * GridWidth;
+        }
     }
 
     public override void Advance(FrameInfo Frame)
     {
-        if (PixelDensityChanged)
+        if (GridParametersChanged)
         {
-            Console.WriteLine($"{GridWidth}, {GridHeight}, {PixelDensity}");
-            PixelWidth = (int)(GridWidth * PixelDensity);
-            PixelHeight = (int)(GridHeight * PixelDensity);
-            PixelDensityChanged = false;
+            PixelWidth = (int)(GridWidth * Grid.PixelDensity);
+            PixelHeight = (int)(GridHeight * Grid.PixelDensity);
+            GridParametersChanged = false;
             UploadTexture();
         }
         if (RootTransformChanged)
@@ -598,10 +669,21 @@ public class SvgWidget : BaseWidget
     {
         ReleaseVertexBuffer();
 
-        float ScreenMinX = -1.0f;
-        float ScreenMaxX = +1.0f;
-        float ScreenMinY = -1.0f;
-        float ScreenMaxY = +1.0f;
+        Vector2 GridOrigin = Vector2.Transform(Vector2.Zero, RootTransform);
+        Vector2 GridDivisor = new Vector2(1.0f / Grid.DivisorX, 1.0f / Grid.DivisorY);
+
+        float LocalOriginX = Single.Lerp(0.0f, GridWidth, AlignX);
+        float LocalOriginY = Single.Lerp(0.0f, GridHeight, AlignY);
+
+        float GridX1 = (-GridWidth - LocalOriginX) * 0.5f;
+        float GridX2 = (+GridWidth - LocalOriginX) * 0.5f;
+        float GridY1 = (+GridHeight - LocalOriginY) * 0.5f;
+        float GridY2 = (-GridHeight - LocalOriginY) * 0.5f;
+
+        Vector2 ScreenNW = Vector2.Transform(new Vector2(GridX1, GridY1), RootTransform) * GridDivisor;
+        Vector2 ScreenNE = Vector2.Transform(new Vector2(GridX2, GridY1), RootTransform) * GridDivisor;
+        Vector2 ScreenSW = Vector2.Transform(new Vector2(GridX1, GridY2), RootTransform) * GridDivisor;
+        Vector2 ScreenSE = Vector2.Transform(new Vector2(GridX2, GridY2), RootTransform) * GridDivisor;
 
         Span<float> Data = stackalloc float[16];
 
@@ -610,10 +692,10 @@ public class SvgWidget : BaseWidget
         Data[0x8] = 1.0f; Data[0x9] = 0.0f;
         Data[0xC] = 1.0f; Data[0xD] = 1.0f;
 
-        Data[0x2] = ScreenMinX; Data[0x3] = ScreenMaxY;
-        Data[0x6] = ScreenMinX; Data[0x7] = ScreenMinY;
-        Data[0xA] = ScreenMaxX; Data[0xB] = ScreenMaxY;
-        Data[0xE] = ScreenMaxX; Data[0xF] = ScreenMinY;
+        Data[0x2] = ScreenNW.X; Data[0x3] = ScreenNW.Y;
+        Data[0x6] = ScreenSW.X; Data[0x7] = ScreenSW.Y;
+        Data[0xA] = ScreenNE.X; Data[0xB] = ScreenNE.Y;
+        Data[0xE] = ScreenSE.X; Data[0xF] = ScreenSE.Y;
 
         uint UploadSize = sizeof(float) * (uint)Data.Length;
 

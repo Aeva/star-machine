@@ -260,13 +260,19 @@ internal class Program
 
             SDL.SDL_HideCursor();
 
-#if false
             var Screen = new RootWidget();
-            Screen.Center.Attachments.Add(new SvgWidget(LowRenderer.Device, "Digital_Camera.svg"));
-            Screen.Rebuild();
-
             LowRenderer.Overlay = Screen;
-#endif
+
+            var Camera = new SvgWidget(LowRenderer.Device, "Digital_Camera.svg", 5.0f, 1.0f);
+            {
+                Camera.AlignX = 1.0f;
+                Camera.AlignY = 0.0f;
+                Camera.Rotate(0.0f);
+                Camera.Visible = false;
+
+                Screen.Center.Attachments.Add(Camera);
+                Screen.Rebuild();
+            }
 
             while (!Halt)
             {
@@ -539,6 +545,16 @@ internal class Program
                     ThisFrame.AspectRatio = (float)ThisFrame.Height / (float)ThisFrame.Width;
 
                     Game.Advance(ThisFrame, PlayerState);
+
+
+                    {
+                        double SpeedometerAlpha = Double.Min(LowRenderer.MilesPerHour / 100.0, 1.0);
+                        double DialRotation = Double.Lerp(45.0, -225.0, SpeedometerAlpha);
+                        Camera.ResetTransform();
+                        Camera.Rotate((float)DialRotation);
+                    }
+
+
                     HighRenderer.Advance(ThisFrame, PlayerState, Game);
                     Halt = LowRenderer.Advance(ThisFrame, Settings, PlayerState.Clear, HighRenderer);
 
