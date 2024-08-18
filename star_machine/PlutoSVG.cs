@@ -38,7 +38,7 @@ namespace PlutoSVG;
 
 public static class PlutoSVG
 {
-    private const string nativeLibName = "plutosvg";
+    private const string nativeLibName = "plutosvg-0";
 
     /**
      * @brief Returns the version number of PlutoSVG.

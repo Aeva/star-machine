@@ -34,7 +34,7 @@ namespace PlutoVG;
 
 public static class PlutoVG
 {
-    private const string nativeLibName = "plutovg";
+    private const string nativeLibName = "plutovg-0";
 
     /**
      * @brief Gets the version of the plutovg library.
