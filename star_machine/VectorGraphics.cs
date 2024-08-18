@@ -1,10 +1,10 @@
 
 using System.Text;
 using System.Reflection;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using static System.Buffer;
 using Vector2 = System.Numerics.Vector2;
-using Vector3 = System.Numerics.Vector3;
 using Matrix3x2 = System.Numerics.Matrix3x2;
 
 using SDL3;
@@ -18,11 +18,6 @@ using static PlutoSVG.PlutoSVG;
 
 using Moloch;
 using static Moloch.BlobHelper;
-using System.Net.Mail;
-using static System.Net.Mime.MediaTypeNames;
-using static StarMachine.ImageOverlay;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
 
 namespace StarMachine;
 
@@ -380,11 +375,12 @@ public class FontResource : ResourceBlob
         }
     }
 
-    public (int W, int H, byte[] Data) Render(string Text, float Scale, float ScreenHeight)
+    public (int W, int H, byte[] Data) Render(string Text, float TexelHeight)
     {
         byte[] TextBytes = Encoding.UTF8.GetBytes(Text);
 
-        float FontSize = ScreenHeight * Scale; // Size in pixels.
+        float FontSize = TexelHeight;
+
         unsafe
         {
             plutovg_rect_t BoundingBox;
@@ -493,44 +489,19 @@ public class SVGResource : ResourceBlob
 }
 
 
-public class SvgWidget : BaseWidget
+public abstract class TextureWidget : BaseWidget
 {
-    private IntPtr Device = IntPtr.Zero;
-    public IntPtr Texture = IntPtr.Zero;
-    public IntPtr Sampler = IntPtr.Zero;
-    public IntPtr VertexBuffer = IntPtr.Zero;
-    public SVGResource Resource;
+    protected IntPtr Device = IntPtr.Zero;
+    private IntPtr Texture = IntPtr.Zero;
+    private IntPtr Sampler = IntPtr.Zero;
+    private IntPtr VertexBuffer = IntPtr.Zero;
 
-    public int PixelWidth = 0;
-    public int PixelHeight = 0;
+    protected int PixelWidth = 0;
+    protected int PixelHeight = 0;
 
     public override FieldInfo[] GetFields()
     {
         return typeof(SvgWidget).GetFields();
-    }
-
-    public SvgWidget(IntPtr InDevice, string ResourceName, float InGridWidth = -1.0f, float InGridHeight=-1.0f)
-    {
-        Device = InDevice;
-        Resource = new SVGResource(ResourceName);
-
-        GridWidth = InGridWidth;
-        GridHeight = InGridHeight;
-
-        if (GridHeight < 0.0f && GridWidth < 0.0f)
-        {
-            GridHeight = 1.0f;
-        }
-
-        if (GridWidth < 0.0f)
-        {
-            GridWidth = (Resource.DocumentWidth / Resource.DocumentHeight) * GridHeight;
-        }
-
-        if (GridHeight < 0.0f)
-        {
-            GridHeight = (Resource.DocumentHeight / Resource.DocumentWidth) * GridWidth;
-        }
     }
 
     public override void Advance(FrameInfo Frame)
@@ -576,6 +547,8 @@ public class SvgWidget : BaseWidget
         SDL_GpuDrawPrimitives(RenderPass, 0, 4);
     }
 
+    public abstract (int TexelWidth, int TexelHeight, byte[] SurfaceData) Rasterize();
+
     public void UploadTexture()
     {
         ReleaseTexture();
@@ -604,7 +577,7 @@ public class SvgWidget : BaseWidget
             }
         }
 
-        (int SurfaceWidth, int SurfaceHeight, byte[] SurfaceData) = Resource.Render(PixelWidth, PixelHeight);
+        (int SurfaceWidth, int SurfaceHeight, byte[] SurfaceData) = Rasterize();
 
         SDL_GpuTextureCreateInfo Desc;
         {
@@ -775,10 +748,82 @@ public class SvgWidget : BaseWidget
         ReleaseVertexBuffer();
     }
 
-    ~SvgWidget()
+    ~TextureWidget()
     {
         Trace.Assert(Texture == IntPtr.Zero);
         Trace.Assert(Sampler == IntPtr.Zero);
         Trace.Assert(VertexBuffer == IntPtr.Zero);
+    }
+}
+
+
+public class SvgWidget : TextureWidget
+{
+    public SVGResource Resource;
+
+    public SvgWidget(IntPtr InDevice, string ResourceName, float InGridWidth = -1.0f, float InGridHeight=-1.0f)
+    {
+        Device = InDevice;
+        Resource = new SVGResource(ResourceName);
+
+        GridWidth = InGridWidth;
+        GridHeight = InGridHeight;
+
+        if (GridHeight < 0.0f && GridWidth < 0.0f)
+        {
+            GridHeight = 1.0f;
+        }
+
+        if (GridWidth < 0.0f)
+        {
+            GridWidth = (Resource.DocumentWidth / Resource.DocumentHeight) * GridHeight;
+        }
+
+        if (GridHeight < 0.0f)
+        {
+            GridHeight = (Resource.DocumentHeight / Resource.DocumentWidth) * GridWidth;
+        }
+    }
+
+    public override (int TexelWidth, int TexelHeight, byte[] SurfaceData) Rasterize()
+    {
+        return Resource.Render(PixelWidth, PixelHeight);
+    }
+}
+
+
+public class TextWidget : TextureWidget
+{
+    private FontResource Resource;
+    private float FontSize;
+    private string Text;
+
+    public TextWidget(IntPtr InDevice, string InText, float Size, string FontName, int FontIndex = 0)
+    {
+        Device = InDevice;
+        FontSize = Size;
+        Text = InText;
+        Resource = new FontResource(FontName, FontIndex);
+    }
+
+    public void SetText(string NewText)
+    {
+        if (NewText != Text)
+        {
+            Text = NewText;
+            GridParametersChanged = true;
+            RootTransformChanged = true;
+        }
+    }
+
+    public override (int TexelWidth, int TexelHeight, byte[] SurfaceData) Rasterize()
+    {
+        byte[] Blob;
+        (PixelWidth, PixelHeight, Blob) = Resource.Render(Text, FontSize * Grid.PixelDensity);
+
+        GridWidth = (float)PixelWidth / Grid.PixelDensity;
+        GridHeight = (float)PixelHeight / Grid.PixelDensity;
+
+        return (PixelWidth, PixelHeight, Blob);
     }
 }

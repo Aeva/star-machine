@@ -78,320 +78,6 @@ struct ViewInfoUpload
 }
 
 
-class ImageOverlay
-{
-    private IntPtr Device = IntPtr.Zero;
-    public IntPtr Texture = IntPtr.Zero;
-    public IntPtr Sampler = IntPtr.Zero;
-    public IntPtr VertexBuffer = IntPtr.Zero;
-
-    public enum AlignModeH
-    {
-        Left,
-        Right,
-        Center,
-    }
-
-    public enum AlignModeV
-    {
-        Top,
-        Bottom,
-        Center,
-    }
-
-    public enum ScaleMode
-    {
-        Aspect, // Ignore the scale value and maintain aspect ratio.
-        Screen, // Scale is the portion of the screen to cover.
-    }
-
-    private float TextureWidth = 0.0f;
-    private float TextureHeight = 0.0f;
-
-    public AlignModeH AlignModeX = AlignModeH.Center;
-    public float AlignX = 0.0f;
-
-    public AlignModeV AlignModeY = AlignModeV.Center;
-    public float AlignY = 0.0f;
-
-    public ScaleMode ScaleModeX = ScaleMode.Screen;
-    public float ScaleX = 1.0f;
-
-    public ScaleMode ScaleModeY = ScaleMode.Aspect;
-    public float ScaleY = 1.0f;
-
-    public ImageOverlay()
-    {
-    }
-
-    public ImageOverlay(IntPtr InDevice, (int W, int H, byte[] Data) Image)
-    {
-        UploadTexture(InDevice, Image);
-    }
-
-    public ImageOverlay(IntPtr InDevice, (int W, int H, byte[] Data) Image, float ScreenWidth, float ScreenHeight)
-    {
-        UploadTexture(InDevice, Image);
-        UploadVertices(ScreenWidth, ScreenHeight);
-    }
-
-    public void UploadTexture(IntPtr InDevice, (int W, int H, byte[] Data) Image)
-    {
-        ReleaseTexture();
-        Device = InDevice;
-
-        if (Sampler == IntPtr.Zero)
-        {
-            SDL_GpuSamplerCreateInfo CreateInfo;
-            {
-                CreateInfo.minFilter = SDL.SDL_GpuFilter.SDL_GPU_FILTER_LINEAR;
-                CreateInfo.magFilter = SDL.SDL_GpuFilter.SDL_GPU_FILTER_LINEAR;
-                CreateInfo.mipmapMode = SDL.SDL_GpuSamplerMipmapMode.SDL_GPU_SAMPLERMIPMAPMODE_NEAREST;
-                CreateInfo.addressModeU = SDL.SDL_GpuSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-                CreateInfo.addressModeV = SDL.SDL_GpuSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-                CreateInfo.addressModeW = SDL.SDL_GpuSamplerAddressMode.SDL_GPU_SAMPLERADDRESSMODE_CLAMP_TO_EDGE;
-                CreateInfo.mipLodBias = 0.0f;
-                CreateInfo.anisotropyEnable = 0;
-                CreateInfo.maxAnisotropy = 0.0f;
-                CreateInfo.compareEnable = 0;
-                CreateInfo.compareOp = SDL.SDL_GpuCompareOp.SDL_GPU_COMPAREOP_NEVER;
-                CreateInfo.minLod = 0.0f;
-                CreateInfo.maxLod = 0.0f;
-            }
-            unsafe
-            {
-                Sampler = SDL_GpuCreateSampler(Device, &CreateInfo);
-            }
-        }
-
-        TextureWidth = (float)Image.W;
-        TextureHeight = (float)Image.H;
-
-        SDL_GpuTextureCreateInfo Desc;
-        {
-            Desc.width = (uint)Image.W;
-            Desc.height = (uint)Image.H;
-            Desc.depth = 1;
-            Desc.isCube = 0;
-            Desc.layerCount = 1;
-            Desc.levelCount = 1;
-            Desc.sampleCount = SDL.SDL_GpuSampleCount.SDL_GPU_SAMPLECOUNT_1;
-            Desc.format = SDL.SDL_GpuTextureFormat.SDL_GPU_TEXTUREFORMAT_B8G8R8A8;
-            Desc.usageFlags = (uint)SDL.SDL_GpuTextureUsageFlagBits.SDL_GPU_TEXTUREUSAGE_SAMPLER_BIT;
-        }
-
-        unsafe
-        {
-            int UploadSize = Image.Data.Length;
-            Texture = SDL_GpuCreateTexture(Device, &Desc);
-            SDL_GpuSetTextureName(Device, Texture, "SVG Test"u8);
-
-            IntPtr TransferBuffer = SDL_GpuCreateTransferBuffer(
-                Device, SDL.SDL_GpuTransferBufferUsage.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, (uint)UploadSize);
-
-            byte* MappedMemory;
-            SDL_GpuMapTransferBuffer(Device, TransferBuffer, 0, (void**)&MappedMemory);
-            fixed (byte* DataPtr = Image.Data)
-            {
-                MemoryCopy(DataPtr, MappedMemory, UploadSize, UploadSize);
-            }
-            SDL_GpuUnmapTransferBuffer(Device, TransferBuffer);
-
-            IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
-            IntPtr CopyPass = SDL_GpuBeginCopyPass(CommandBuffer);
-
-            SDL_GpuTextureTransferInfo TransferInfo;
-            {
-                TransferInfo.transferBuffer = TransferBuffer;
-                TransferInfo.offset = 0;
-                TransferInfo.imagePitch = Desc.width;
-                TransferInfo.imageHeight = Desc.height;
-            }
-            SDL_GpuTextureRegion Region;
-            {
-                Region.textureSlice.texture = Texture;
-                Region.textureSlice.mipLevel = 0;
-                Region.textureSlice.layer = 0;
-                Region.x = 0;
-                Region.y = 0;
-                Region.z = 0;
-                Region.w = Desc.width;
-                Region.h = Desc.height;
-                Region.d = 1;
-            }
-            SDL_GpuUploadToTexture(CopyPass, &TransferInfo, &Region, 0);
-            SDL_GpuEndCopyPass(CopyPass);
-            SDL_GpuSubmit(CommandBuffer);
-            SDL_GpuReleaseTransferBuffer(Device, TransferBuffer);
-        }
-    }
-
-    public void UploadVertices(float ScreenWidth, float ScreenHeight)
-    {
-        Trace.Assert(Device != IntPtr.Zero);
-        ReleaseVertexBuffer();
-
-        float ScreenMinX = -1.0f;
-        float ScreenMaxX = +1.0f;
-        float ScreenMinY = -1.0f;
-        float ScreenMaxY = +1.0f;
-
-        {
-            float TextureScaleX = 1.0f;
-            float TextureScaleY = 1.0f;
-
-            if (ScaleModeX == ScaleMode.Screen)
-            {
-                TextureScaleX = ScaleX;
-                if (ScaleModeY == ScaleMode.Aspect)
-                {
-                    TextureScaleY = (TextureHeight / TextureWidth) / (ScreenHeight / ScreenWidth) * TextureScaleX;
-                }
-            }
-
-            if (ScaleModeY == ScaleMode.Screen)
-            {
-                TextureScaleY = ScaleY;
-                if (ScaleModeX == ScaleMode.Aspect)
-                {
-                    TextureScaleX = (TextureWidth / TextureHeight) / (ScreenWidth / ScreenHeight) * TextureScaleY;
-                }
-            }
-
-            float SpanX = 2.0f * TextureScaleX;
-            float SpanY = 2.0f * TextureScaleY;
-
-            if (AlignModeX == AlignModeH.Left)
-            {
-                ScreenMinX = Single.Lerp(-1.0f, +1.0f, AlignX);
-                ScreenMaxX = ScreenMinX + SpanX;
-            }
-            else if (AlignModeX == AlignModeH.Right)
-            {
-                ScreenMaxX = Single.Lerp(+1.0f, -1.0f, AlignX);
-                ScreenMinX = ScreenMaxX - SpanX;
-            }
-            else if (AlignModeX == AlignModeH.Center)
-            {
-                ScreenMinX = SpanX * -0.5f;
-                ScreenMaxX = SpanX * +0.5f;
-            }
-
-            if (AlignModeY == AlignModeV.Top)
-            {
-                ScreenMaxY = Single.Lerp(+1.0f, -1.0f, AlignY);
-                ScreenMinY = ScreenMaxY - SpanY;
-            }
-            else if (AlignModeY == AlignModeV.Bottom)
-            {
-                ScreenMinY = Single.Lerp(-1.0f, +1.0f, AlignY);
-                ScreenMaxY = ScreenMinY + SpanY;
-            }
-            else if (AlignModeY == AlignModeV.Center)
-            {
-                ScreenMinY = SpanY * -0.5f;
-                ScreenMaxY = SpanY * +0.5f;
-            }
-        }
-
-        Span<float> Data = stackalloc float[16];
-
-        Data[0x0] = 0.0f; Data[0x1] = 0.0f;
-        Data[0x4] = 0.0f; Data[0x5] = 1.0f;
-        Data[0x8] = 1.0f; Data[0x9] = 0.0f;
-        Data[0xC] = 1.0f; Data[0xD] = 1.0f;
-
-        Data[0x2] = ScreenMinX; Data[0x3] = ScreenMaxY;
-        Data[0x6] = ScreenMinX; Data[0x7] = ScreenMinY;
-        Data[0xA] = ScreenMaxX; Data[0xB] = ScreenMaxY;
-        Data[0xE] = ScreenMaxX; Data[0xF] = ScreenMinY;
-
-        uint UploadSize = sizeof(float) * (uint)Data.Length;
-
-        VertexBuffer = SDL_GpuCreateBuffer(
-            Device,
-            (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
-            UploadSize);
-        SDL_GpuSetBufferName(Device, VertexBuffer, "Fnord"u8);
-
-        IntPtr TransferBuffer = SDL_GpuCreateTransferBuffer(
-            Device, SDL_GpuTransferBufferUsage.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD, UploadSize);
-
-        unsafe
-        {
-            byte* MappedMemory;
-            SDL_GpuMapTransferBuffer(Device, TransferBuffer, 0, (void**)&MappedMemory);
-            fixed (void* UploadData = Data)
-            {
-                MemoryCopy(UploadData, MappedMemory, UploadSize, UploadSize);
-            }
-            SDL_GpuUnmapTransferBuffer(Device, TransferBuffer);
-        }
-
-        IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
-        IntPtr CopyPass = SDL_GpuBeginCopyPass(CommandBuffer);
-        unsafe
-        {
-            SDL_GpuTransferBufferLocation Source;
-            {
-                Source.transferBuffer = TransferBuffer;
-                Source.offset = 0;
-            }
-            SDL_GpuBufferRegion Dest;
-            {
-                Dest.buffer = VertexBuffer;
-                Dest.offset = 0;
-                Dest.size = UploadSize;
-            }
-            SDL_GpuUploadToBuffer(CopyPass, &Source, &Dest, 0);
-        }
-        SDL_GpuEndCopyPass(CopyPass);
-        SDL_GpuSubmit(CommandBuffer);
-        SDL_GpuReleaseTransferBuffer(Device, TransferBuffer);
-    }
-
-    public void ReleaseTexture()
-    {
-        if (Texture != IntPtr.Zero)
-        {
-            SDL_GpuReleaseTexture(Device, Texture);
-            Texture = IntPtr.Zero;
-        }
-    }
-
-    public void ReleaseSampler()
-    {
-        if (Sampler != IntPtr.Zero)
-        {
-            SDL_GpuReleaseSampler(Device, Sampler);
-            Sampler = IntPtr.Zero;
-        }
-    }
-
-    public void ReleaseVertexBuffer()
-    {
-        if (VertexBuffer != IntPtr.Zero)
-        {
-            SDL_GpuReleaseBuffer(Device, VertexBuffer);
-            VertexBuffer = IntPtr.Zero;
-        }
-    }
-
-    public void Release()
-    {
-        ReleaseTexture();
-        ReleaseSampler();
-        ReleaseVertexBuffer();
-    }
-
-    ~ImageOverlay()
-    {
-        Trace.Assert(Texture == IntPtr.Zero);
-        Trace.Assert(VertexBuffer == IntPtr.Zero);
-    }
-}
-
-
 class LowLevelRenderer
 {
     public IntPtr Window = IntPtr.Zero;
@@ -407,32 +93,16 @@ class LowLevelRenderer
     private IntPtr SplatWorldPositionBuffer_H = IntPtr.Zero;
     private IntPtr SplatColorBuffer = IntPtr.Zero;
 
-    private FontResource Michroma = new("Michroma-Regular.ttf");
-    private ImageOverlay Speedometer;
-
     public RootWidget? Overlay = null;
 
     public double MilesPerHour = 0.0; // Current speed
     public double SpeedOfLight = 0.0; // Current speed
-
-    public List<ImageOverlay> Overlays;
 
     private SplatGenerator SplatMesh;
 
     public LowLevelRenderer(SplatGenerator InSplatMesh)
     {
         SplatMesh = InSplatMesh;
-        Overlays = new List<ImageOverlay>();
-        {
-            Speedometer = new ImageOverlay();
-            Speedometer.ScaleModeX = ImageOverlay.ScaleMode.Aspect;
-            Speedometer.ScaleModeY = ImageOverlay.ScaleMode.Screen;
-            Speedometer.ScaleY = 0.05f;
-            Speedometer.AlignModeX = ImageOverlay.AlignModeH.Center;
-            Speedometer.AlignModeY = ImageOverlay.AlignModeV.Bottom;
-            Speedometer.AlignY = 0.01f;
-            Overlays.Add(Speedometer);
-        }
     }
 
     private IntPtr LoadShader(
@@ -1142,42 +812,6 @@ class LowLevelRenderer
             SDL_GpuSetBufferName(Device, SplatColorBuffer, "SplatColorBuffer"u8);
         }
 
-#if false
-        {
-            float ScreenWidth = (float)ColorTextureDesc.width;
-            float ScreenHeight = (float)ColorTextureDesc.height;
-
-            {
-                SVGResource TigerSVG = new("tiger.svg");
-                var Overlay = new ImageOverlay(Device, TigerSVG.Render((int)ScreenWidth, -1));
-                Overlay.AlignModeY = ImageOverlay.AlignModeV.Top;
-                Overlay.AlignY = -0.0f;
-                Overlay.ScaleX = 0.5f;
-                Overlay.UploadVertices(ScreenWidth, ScreenHeight);
-                Overlays.Add(Overlay);
-            }
-
-            {
-                SVGResource CameraSVG = new("Digital_Camera.svg");
-                var Overlay = new ImageOverlay(Device, CameraSVG.Render((int)ScreenWidth, -1));
-                Overlay.AlignModeY = ImageOverlay.AlignModeV.Bottom;
-                Overlay.AlignY = -0.15f;
-                Overlay.ScaleX = 0.75f;
-                Overlay.UploadVertices(ScreenWidth, ScreenHeight);
-                Overlays.Add(Overlay);
-            }
-
-            {
-                var Overlay = new ImageOverlay(Device, Michroma.Render("hail eris", 0.1f, ScreenHeight));
-                Overlay.ScaleModeX = ImageOverlay.ScaleMode.Aspect;
-                Overlay.ScaleModeY = ImageOverlay.ScaleMode.Screen;
-                Overlay.ScaleY = 0.1f;
-                Overlay.UploadVertices(ScreenWidth, ScreenHeight);
-                Overlays.Add(Overlay);
-            }
-        }
-#endif
-
         Console.WriteLine("Ignition successful.");
         return false;
     }
@@ -1215,12 +849,6 @@ class LowLevelRenderer
 
         if (Device != IntPtr.Zero)
         {
-            foreach (ImageOverlay Overlay in Overlays)
-            {
-                Overlay.Release();
-            }
-            Overlays.Clear();
-
             MaybeReleaseBuffer(SplatColorBuffer);
             MaybeReleaseBuffer(SplatWorldPositionBuffer_L);
             MaybeReleaseBuffer(SplatWorldPositionBuffer_H);
@@ -1257,6 +885,7 @@ class LowLevelRenderer
                 Overlay.Advance(Frame);
             }
 
+#if false
             {
                 string Text;
                 if (SpeedOfLight > 0.0001)
@@ -1278,6 +907,7 @@ class LowLevelRenderer
                 Speedometer.UploadTexture(Device, Michroma.Render(Text, Speedometer.ScaleY * 1.5f, (float)Height));
                 Speedometer.UploadVertices((float)Width, (float)Height);
             }
+#endif
 
             ViewInfoUpload ViewInfo;
             {
@@ -1435,7 +1065,7 @@ class LowLevelRenderer
                     SDL_GpuEndRenderPass(RevealPass);
                 }
 
-                if (Overlays.Count > 0)
+                if (Overlay != null)
                 {
                     SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
                     {
@@ -1457,36 +1087,7 @@ class LowLevelRenderer
                         SDL_GpuSetViewport(OverlayPass, &Viewport);
                         SDL_GpuSetScissor(OverlayPass, &ScissorRect);
 
-                        if (Overlay != null)
-                        {
-                            Overlay.Draw(OverlayPass);
-                        }
-
-                        foreach (ImageOverlay Overlay in Overlays)
-                        {
-                            if (Overlay.Texture != IntPtr.Zero)
-                            {
-                                SDL_GpuBufferBinding VertexBufferBindings;
-                                {
-                                    VertexBufferBindings.buffer = Overlay.VertexBuffer;
-                                    VertexBufferBindings.offset = 0;
-                                }
-
-                                SDL_GpuTextureSamplerBinding SamplerBindings;
-                                {
-                                    SamplerBindings.texture = Overlay.Texture;
-                                    SamplerBindings.sampler = Overlay.Sampler;
-                                }
-
-                                unsafe
-                                {
-                                    SDL_GpuBindVertexBuffers(OverlayPass, 0, &VertexBufferBindings, 1);
-                                    SDL_GpuBindFragmentSamplers(OverlayPass, 0, &SamplerBindings, 1);
-                                }
-
-                                SDL_GpuDrawPrimitives(OverlayPass, 0, 4);
-                            }
-                        }
+                        Overlay.Draw(OverlayPass);
                     }
                     SDL_GpuPopDebugGroup(CommandBuffer);
                     SDL_GpuEndRenderPass(OverlayPass);

@@ -6,7 +6,6 @@ using static SDL3.SDL;
 
 using FixedInt = FixedPoint.FixedInt;
 using Fixie = FixedPoint.Fixie;
-using System.Reflection;
 
 
 namespace StarMachine;

@@ -268,11 +268,26 @@ internal class Program
                 Camera.AlignX = 1.0f;
                 Camera.AlignY = 0.0f;
                 Camera.Rotate(0.0f);
-                Camera.Visible = false;
-
-                Screen.Center.Attachments.Add(Camera);
-                Screen.Rebuild();
+                Camera.Visible = true;
             }
+
+            var Speedometer = new TextWidget(LowRenderer.Device, "0", 1.5f, "Michroma-Regular.ttf");
+            {
+                Speedometer.AlignX = 1.0f;
+                Speedometer.AlignY = -1.0f;
+                Speedometer.Move(0.0f, 0.1f);
+            }
+            var SpeedometerLabel = new TextWidget(LowRenderer.Device, " mph", 1.5f, "Michroma-Regular.ttf");
+            {
+                SpeedometerLabel.AlignX = -1.0f;
+                SpeedometerLabel.AlignY = -1.0f;
+                SpeedometerLabel.Move(0.0f, 0.1f);
+            }
+
+            Screen.Center.Attachments.Add(Camera);
+            Screen.BottomCenter.Attachments.Add(Speedometer);
+            Screen.BottomCenter.Attachments.Add(SpeedometerLabel);
+            Screen.Rebuild();
 
             while (!Halt)
             {
@@ -546,7 +561,6 @@ internal class Program
 
                     Game.Advance(ThisFrame, PlayerState);
 
-
                     {
                         double SpeedometerAlpha = Double.Min(LowRenderer.MilesPerHour / 100.0, 1.0);
                         double DialRotation = Double.Lerp(45.0, -225.0, SpeedometerAlpha);
@@ -554,6 +568,31 @@ internal class Program
                         Camera.Rotate((float)DialRotation);
                     }
 
+                    {
+                        double MilesPerHour = LowRenderer.MilesPerHour;
+                        double SpeedOfLight = LowRenderer.SpeedOfLight;
+
+                        if (SpeedOfLight > 0.0001)
+                        {
+                            Speedometer.SetText($"{SpeedOfLight}");
+                            SpeedometerLabel.SetText(" c");
+                        }
+                        else if (MilesPerHour > 1.0)
+                        {
+                            Speedometer.SetText($"{Double.Round(MilesPerHour)}");
+                            SpeedometerLabel.SetText(" mph");
+                        }
+                        else if (MilesPerHour > 0.1)
+                        {
+                            Speedometer.SetText($"{Double.Round(MilesPerHour, 1)}");
+                            SpeedometerLabel.SetText(" mph");
+                        }
+                        else
+                        {
+                            Speedometer.SetText($"{Double.Round(MilesPerHour, 2)}");
+                            SpeedometerLabel.SetText(" mph");
+                        }
+                    }
 
                     HighRenderer.Advance(ThisFrame, PlayerState, Game);
                     Halt = LowRenderer.Advance(ThisFrame, Settings, PlayerState.Clear, HighRenderer);
