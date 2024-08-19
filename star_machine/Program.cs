@@ -369,11 +369,16 @@ internal class Program
                 SpeedometerLabel.Move(0.0f, 0.1f);
             }
 
-#if false
-            var SpeedometerDial = new DialWidget(LowRenderer.Device, 8.0f, 8.0f);
-            SpeedometerDial.OrderHint = -1;
+#if true
+            var SpeedometerDial = new DialWidget(LowRenderer.Device, 8.0f);
+            SpeedometerDial.OrderHint = -2;
             SpeedometerDial.Move(0.0f, -2.0f);
             Screen.BottomCenter.Attachments.Add(SpeedometerDial);
+
+            var SpeedometerNeedle = new NeedleWidget(LowRenderer.Device, 0.2f, 3.5f);
+            SpeedometerNeedle.OrderHint = -1;
+            SpeedometerNeedle.Move(0.0f, 2.0f);
+            Screen.BottomCenter.Attachments.Add(SpeedometerNeedle);
 #endif
 
             Screen.Center.Attachments.Add(Camera);
@@ -696,10 +701,11 @@ internal class Program
                     }
 
                     {
-                        double SpeedometerAlpha = Double.Min(Game.MilesPerHour / 100.0, 1.0);
-                        double DialRotation = Double.Lerp(45.0, -225.0, SpeedometerAlpha);
-                        Camera.ResetTransform();
-                        Camera.Rotate((float)DialRotation);
+                        double SpeedometerAlpha = Double.Min(Game.MilesPerHour / 135.0, 1.0);
+                        double DialRotation = Double.Lerp(120.0, -120.0, SpeedometerAlpha);
+                        SpeedometerNeedle.ResetTransform();
+                        SpeedometerNeedle.Move(0.0f, 2.0f);
+                        SpeedometerNeedle.Rotate((float)DialRotation);
                     }
 
                     {

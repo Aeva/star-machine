@@ -860,9 +860,9 @@ public abstract class PlutoWidget : TextureWidget
 }
 
 
-public class DialWidget : PlutoWidget
+public class NeedleWidget : PlutoWidget
 {
-    public DialWidget(IntPtr InDevice, float InGridWidth, float InGridHeight)
+    public NeedleWidget(IntPtr InDevice, float InGridWidth, float InGridHeight)
     {
         Device = InDevice;
         GridWidth = InGridWidth;
@@ -876,19 +876,67 @@ public class DialWidget : PlutoWidget
         plutovg_canvas_t* Canvas = plutovg_canvas_create(Surface);
 
         float LineWidth = Grid.PixelDensity * 0.05f;
-        float Radius = ((float)PixelHeight) * 0.5f;
 
         plutovg_path_t* Path = plutovg_path_create();
-        plutovg_path_add_circle(Path, Radius, Radius, Radius - (LineWidth * 0.5f));
-
-        plutovg_canvas_set_rgba(Canvas, 0.1f, 0.1f, 0.1f, 0.9f);
-        plutovg_canvas_fill_path(Canvas, Path);
+        plutovg_path_move_to(Path, LineWidth * 0.5f, (GridHeight - 0.5f) * Grid.PixelDensity);
+        plutovg_path_line_to(Path, GridWidth * 0.5f * Grid.PixelDensity, 0.0f);
+        plutovg_path_line_to(Path, GridWidth * Grid.PixelDensity - LineWidth * 0.5f, (GridHeight - 0.5f) * Grid.PixelDensity);
 
         plutovg_canvas_set_rgba(Canvas, 0.0f, 0.0f, 0.0f, 1.0f);
+        plutovg_canvas_fill_path(Canvas, Path);
+
+        plutovg_canvas_set_rgba(Canvas, 1.0f, 0.5f, 0.0f, 1.0f);
         plutovg_canvas_set_line_width(Canvas, LineWidth);
         plutovg_canvas_stroke_path(Canvas, Path);
 
         plutovg_path_destroy(Path);
+        plutovg_canvas_destroy(Canvas);
+    }
+}
+
+
+public class DialWidget : PlutoWidget
+{
+    public DialWidget(IntPtr InDevice, float Daimeter)
+    {
+        Device = InDevice;
+        GridWidth = Daimeter;
+        GridHeight = Daimeter;
+        AlignX = 0.0f;
+        AlignY = -1.0f;
+    }
+
+    public unsafe override void RasterizeSurface(plutovg_surface_t* Surface)
+    {
+        plutovg_canvas_t* Canvas = plutovg_canvas_create(Surface);
+
+        float LineWidth = Grid.PixelDensity * 0.05f;
+        float Radius = ((float)PixelHeight) * 0.5f;
+
+        {
+            plutovg_path_t* Path = plutovg_path_create();
+            /*
+            plutovg_path_add_circle(Path, Radius, Radius, Radius - (LineWidth * 0.5f));
+            plutovg_canvas_set_rgba(Canvas, 0.1f, 0.1f, 0.1f, 0.25f);
+            plutovg_canvas_fill_path(Canvas, Path);
+            */
+            /*
+            plutovg_canvas_set_rgba(Canvas, 0.0f, 0.0f, 0.0f, 0.5f);
+            plutovg_canvas_set_line_width(Canvas, LineWidth);
+            plutovg_canvas_stroke_path(Canvas, Path);
+            */
+            plutovg_path_destroy(Path);
+        }
+
+        {
+            plutovg_path_t* Path = plutovg_path_create();
+            plutovg_path_add_circle(Path, Radius, Radius, Grid.PixelDensity * 0.45f);
+            plutovg_canvas_set_rgba(Canvas, 0.0f, 0.0f, 0.0f, 0.7f);
+            plutovg_canvas_set_line_width(Canvas, Grid.PixelDensity * 0.125f);
+            plutovg_canvas_stroke_path(Canvas, Path);
+            plutovg_path_destroy(Path);
+        }
+
         plutovg_canvas_destroy(Canvas);
     }
 }
