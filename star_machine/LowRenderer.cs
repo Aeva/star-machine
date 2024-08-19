@@ -95,9 +95,6 @@ class LowLevelRenderer
 
     public RootWidget? Overlay = null;
 
-    public double MilesPerHour = 0.0; // Current speed
-    public double SpeedOfLight = 0.0; // Current speed
-
     private SplatGenerator SplatMesh;
 
     public LowLevelRenderer(SplatGenerator InSplatMesh)
@@ -884,30 +881,6 @@ class LowLevelRenderer
             {
                 Overlay.Advance(Frame);
             }
-
-#if false
-            {
-                string Text;
-                if (SpeedOfLight > 0.0001)
-                {
-                    Text = $"{SpeedOfLight} c";
-                }
-                else if (MilesPerHour > 1.0)
-                {
-                    Text = $"{Double.Round(MilesPerHour)} mph";
-                }
-                else if (MilesPerHour > 0.1)
-                {
-                    Text = $"{Double.Round(MilesPerHour, 1)} mph";
-                }
-                else
-                {
-                    Text = $"{Double.Round(MilesPerHour, 2)} mph";
-                }
-                Speedometer.UploadTexture(Device, Michroma.Render(Text, Speedometer.ScaleY * 1.5f, (float)Height));
-                Speedometer.UploadVertices((float)Width, (float)Height);
-            }
-#endif
 
             ViewInfoUpload ViewInfo;
             {

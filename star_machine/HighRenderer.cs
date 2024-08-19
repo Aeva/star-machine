@@ -36,6 +36,15 @@ class HighLevelRenderer
     public float Tunneling = 0.25f;
     public float GrainAlpha = 1.0f;
 
+    // Stats for display
+    public double CadenceHz = 0.0f;
+    public double CadenceMs = 0.0f;
+    public double UpdatesPerFrame = 0.0;
+    public double Efficiency = 0.0;
+    public double UpdateProcessingMs = 0.0;
+    public double ConvergenceTimeMs = 0.0;
+    public string? Analysis = null;
+
     // These are ring buffers for splat rendering.
     public Fixie[] PositionUpload = Array.Empty<Fixie>();
     public Vector3[] ColorUpload = Array.Empty<Vector3>();
@@ -218,53 +227,33 @@ class HighLevelRenderer
 
         SplatDiameter = Single.Lerp(FineDiameter, CoarseDiameter, GrainAlpha);
 
-        double CadenceMs = FrameRate.Average();
-
-        double Hz = 1.0 / CadenceMs * 1000.0;
-
-        const long PerfLogFrequency = TimeSpan.TicksPerSecond * 5;
+        const long PerfLogFrequency = TimeSpan.TicksPerSecond * 1;
         if (DateTime.UtcNow.Ticks - LastPerfLog >= PerfLogFrequency)
         {
             if (LastPerfLog > 0)
             {
-                double UpdatesPerFrame = SplatCopyCount.Average();
-                double UpdateProcessingMs = SplatCopyTime.Average();
-                double Efficiency = (UpdatesPerFrame / Settings.MaxSurfels) * 100.0;
 
-                double ConvergenceTimeMs = ((Settings.MaxSurfels / UpdatesPerFrame) - 1) * CadenceMs;
+                CadenceMs = FrameRate.Average();
+                CadenceHz = 1.0 / CadenceMs * 1000.0;
 
-                //TracingRate = Math.Max(MinTracingRate, (int)UpdatesPerFrame);
+                UpdatesPerFrame = SplatCopyCount.Average();
+                UpdateProcessingMs = SplatCopyTime.Average();
+                Efficiency = (UpdatesPerFrame / Settings.MaxSurfels) * 100.0;
 
-                Console.Write(
-                    "\n\n" +
-                    " +- Cadence ------------------------------------------------------------------+\n" +
-                    " |\n" +
-                    $" |           Frequency : {Math.Round(Hz, 1)} hz\n" +
-                    $" |            Interval : {Math.Round(CadenceMs, 1)} ms\n" +
-                    " |\n" +
-                    " +- Shading ------------------------------------------------------------------+\n" +
-                    " |\n" +
-                    $" |          Throughput : {Math.Round(UpdatesPerFrame, 0)} ({Math.Round(Efficiency, 2)}%)\n" +
-                    $" |           Sync Time : {Math.Round(UpdateProcessingMs, 2)} ms\n" +
-                    $" |    Convergence Time : {Math.Round(ConvergenceTimeMs, 2)} ms\n" +
-                    " |\n" +
-                    " +- Analysis -----------------------------------------------------------------+\n" +
-                    " |\n"
-                );
+                ConvergenceTimeMs = ((Settings.MaxSurfels / UpdatesPerFrame) - 1) * CadenceMs;
 
                 if (Efficiency == 100.0)
                 {
-                    Console.WriteLine(" |    Convergence time is perfect.");
+                    Analysis = null;
                 }
                 else if (UpdateProcessingMs < 4.0)
                 {
-                    Console.WriteLine(" |    Convergence time is bottlenecked on shading throughput.");
+                    Analysis = "Convergence time is bottlenecked on shading throughput.";
                 }
                 else if (UpdateProcessingMs >= 4.0)
                 {
-                    Console.WriteLine(" |    Convergence time is bottlenecked on Synchronization.");
+                    Analysis = "Convergence time is bottlenecked on Synchronization.";
                 }
-                Console.WriteLine(" |\n +\n");
             }
             LastPerfLog = DateTime.UtcNow.Ticks;
         }

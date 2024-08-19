@@ -6,6 +6,7 @@ using SDL3;
 using static SDL3.SDL;
 
 using FixedPointTests = FixedPoint.FixedPointTests;
+using FixedInt = FixedPoint.FixedInt;
 
 
 namespace StarMachine;
@@ -44,6 +45,10 @@ public class RenderingConfig
 
     // Whether to use paraboloids or discs.
     public bool ParaboloidSplats = true;
+
+    public bool ShowCadenceStats = true;
+    public bool ShowShadingStats = true;
+    public bool ShowGameState = true;
 }
 
 
@@ -263,21 +268,99 @@ internal class Program
             var Screen = new RootWidget();
             LowRenderer.Overlay = Screen;
 
+            TextWidget? PerfFrequency = null;
+            TextWidget? PerfInterval = null;
+            TextWidget? PerfThroughput = null;
+            TextWidget? PerfConvergence = null;
+            TextWidget? PerfSyncTime = null;
+            TextWidget? DebugX = null;
+            TextWidget? DebugY = null;
+
+            {
+                float FontSize = 0.5f;
+                float Margin = 0.1f;
+                float LineSpacing = -FontSize * 1.25f;
+                float Indent = FontSize * 17.0f + Margin;
+                float Line = -Margin + LineSpacing;
+
+                var AddStat = (string Stat) =>
+                {
+                    var Label = new TextWidget(LowRenderer.Device, Stat, FontSize, "Michroma-Regular.ttf");
+                    Label.AlignX = 1.0f;
+                    Label.AlignY = 1.0f;
+                    Label.Move(Indent, Line);
+                    Screen.TopLeft.Attachments.Add(Label);
+
+                    var Value = new TextWidget(LowRenderer.Device, " 0", FontSize, "Michroma-Regular.ttf");
+                    Value.AlignX = -1.0f;
+                    Value.AlignY = 1.0f;
+                    Value.Move(Indent, Line);
+                    Screen.TopLeft.Attachments.Add(Value);
+                    Line += LineSpacing;
+                    return (Label, Value);
+                };
+
+                if (Settings.ShowCadenceStats)
+                {
+                    (_, PerfFrequency) = AddStat("frequency (hz): ");
+                    (_, PerfInterval) = AddStat("interval (ms): ");
+                    Line += LineSpacing;
+                }
+                if (Settings.ShowShadingStats)
+                {
+                    (_, PerfThroughput) = AddStat("splats per frame: ");
+                    (_, PerfConvergence) = AddStat("convergence time (ms): ");
+                    (_, PerfSyncTime) = AddStat("sync time (ms): ");
+                    Line += LineSpacing;
+                }
+            }
+            {
+                float FontSize = 0.5f;
+                float Margin = 0.1f;
+                float LineSpacing = -FontSize * 1.25f;
+                float Indent = FontSize * 10.0f + Margin;
+                float Line = -Margin + LineSpacing;
+
+                var AddStat = (string Stat) =>
+                {
+                    var Label = new TextWidget(LowRenderer.Device, Stat, FontSize, "Michroma-Regular.ttf");
+                    Label.AlignX = 1.0f;
+                    Label.AlignY = 1.0f;
+                    Label.Move(Indent, Line);
+                    Screen.TopCenter.Attachments.Add(Label);
+
+                    var Value = new TextWidget(LowRenderer.Device, " 0", FontSize, "Michroma-Regular.ttf");
+                    Value.AlignX = -1.0f;
+                    Value.AlignY = 1.0f;
+                    Value.Move(Indent, Line);
+                    Screen.TopCenter.Attachments.Add(Value);
+                    Line += LineSpacing;
+                    return (Label, Value);
+                };
+                if (Settings.ShowGameState)
+                {
+                    (_, DebugX) = AddStat("x (miles): ");
+                    (_, DebugY) = AddStat("y (miles): ");
+                    Line += LineSpacing;
+                }
+            }
+
             var Camera = new SvgWidget(LowRenderer.Device, "Digital_Camera.svg", 5.0f, 1.0f);
             {
                 Camera.AlignX = 1.0f;
                 Camera.AlignY = 0.0f;
                 Camera.Rotate(0.0f);
-                Camera.Visible = true;
+                Camera.Visible = false;
             }
 
-            var Speedometer = new TextWidget(LowRenderer.Device, "0", 1.5f, "Michroma-Regular.ttf");
+            var Speedometer = new TextWidget(LowRenderer.Device, "0", 1.25f, "Michroma-Regular.ttf");
             {
                 Speedometer.AlignX = 1.0f;
                 Speedometer.AlignY = -1.0f;
                 Speedometer.Move(0.0f, 0.1f);
             }
-            var SpeedometerLabel = new TextWidget(LowRenderer.Device, " mph", 1.5f, "Michroma-Regular.ttf");
+
+            var SpeedometerLabel = new TextWidget(LowRenderer.Device, " mph", 1.25f, "Michroma-Regular.ttf");
             {
                 SpeedometerLabel.AlignX = -1.0f;
                 SpeedometerLabel.AlignY = -1.0f;
@@ -561,35 +644,40 @@ internal class Program
 
                     Game.Advance(ThisFrame, PlayerState);
 
+                    PerfFrequency?.SetText($" {Double.Round(HighRenderer.CadenceHz, 1):N}");
+                    PerfInterval?.SetText($" {Double.Round(HighRenderer.CadenceMs, 1):N}");
+                    PerfThroughput?.SetText($" {Double.Round(HighRenderer.UpdatesPerFrame):N} ({Double.Round(HighRenderer.Efficiency)}%)");
+                    PerfConvergence?.SetText($" {Double.Round(HighRenderer.ConvergenceTimeMs):N}");
+                    PerfSyncTime?.SetText($" {Double.Round(HighRenderer.UpdateProcessingMs, 1):N}");
+                    DebugX?.SetText($" {(HighRenderer.Eye.X / (4.0f * 1609.344f))}");
+                    DebugY?.SetText($" {(HighRenderer.Eye.Y / (4.0f * 1609.344f))}");
+
                     {
-                        double SpeedometerAlpha = Double.Min(LowRenderer.MilesPerHour / 100.0, 1.0);
+                        double SpeedometerAlpha = Double.Min(Game.MilesPerHour / 100.0, 1.0);
                         double DialRotation = Double.Lerp(45.0, -225.0, SpeedometerAlpha);
                         Camera.ResetTransform();
                         Camera.Rotate((float)DialRotation);
                     }
 
                     {
-                        double MilesPerHour = LowRenderer.MilesPerHour;
-                        double SpeedOfLight = LowRenderer.SpeedOfLight;
-
-                        if (SpeedOfLight > 0.0001)
+                        if (Game.SpeedOfLight > 0.0001)
                         {
-                            Speedometer.SetText($"{SpeedOfLight}");
+                            Speedometer.SetText($"{Game.SpeedOfLight}");
                             SpeedometerLabel.SetText(" c");
                         }
-                        else if (MilesPerHour > 1.0)
+                        else if (Game.MilesPerHour > 1.0)
                         {
-                            Speedometer.SetText($"{Double.Round(MilesPerHour)}");
+                            Speedometer.SetText($"{Double.Round(Game.MilesPerHour)}");
                             SpeedometerLabel.SetText(" mph");
                         }
-                        else if (MilesPerHour > 0.1)
+                        else if (Game.MilesPerHour > 0.1)
                         {
-                            Speedometer.SetText($"{Double.Round(MilesPerHour, 1)}");
+                            Speedometer.SetText($"{Double.Round(Game.MilesPerHour, 1)}");
                             SpeedometerLabel.SetText(" mph");
                         }
                         else
                         {
-                            Speedometer.SetText($"{Double.Round(MilesPerHour, 2)}");
+                            Speedometer.SetText($"{Double.Round(Game.MilesPerHour, 2)}");
                             SpeedometerLabel.SetText(" mph");
                         }
                     }

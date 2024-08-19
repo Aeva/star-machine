@@ -396,11 +396,11 @@ public class FontResource : ResourceBlob
                 plutovg_font_face_get_metrics(Handle, FontSize, &Ascent, &Descent, &LineGap, &BoundingBox);
 
                 float Advance = plutovg_font_face_text_extents(Handle, FontSize, TextPtr, TextBytes.Length, Encoding, &BoundingBox);
-                Surface = plutovg_surface_create((int)Single.Floor(BoundingBox.w), (int)Single.Ceiling(FontSize));
+                Surface = plutovg_surface_create((int)Single.Ceiling(BoundingBox.w), (int)Single.Ceiling(FontSize));
                 Canvas = plutovg_canvas_create(Surface);
                 plutovg_canvas_set_rgba(Canvas, 1.0f, 1.0f, 1.0f, 1.0f);
                 plutovg_canvas_set_font(Canvas, Handle, FontSize);
-                plutovg_canvas_fill_text(Canvas, TextPtr, TextBytes.Length, Encoding, Single.Floor(-BoundingBox.x), Ascent + Descent);
+                plutovg_canvas_fill_text(Canvas, TextPtr, TextBytes.Length, Encoding, Single.Ceiling(-BoundingBox.x), Ascent + Descent);
             }
 
             byte* Data = plutovg_surface_get_data(Surface);
@@ -508,8 +508,8 @@ public abstract class TextureWidget : BaseWidget
     {
         if (GridParametersChanged)
         {
-            PixelWidth = (int)(GridWidth * Grid.PixelDensity);
-            PixelHeight = (int)(GridHeight * Grid.PixelDensity);
+            PixelWidth = (int)Single.Round(GridWidth * Grid.PixelDensity);
+            PixelHeight = (int)Single.Round(GridHeight * Grid.PixelDensity);
             GridParametersChanged = false;
             UploadTexture();
         }

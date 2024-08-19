@@ -17,6 +17,10 @@ class CharacterController
     private LowLevelRenderer LowRenderer;
     public float CurrentHeading = 0.0f;
 
+
+    public double MilesPerHour = 0.0; // Current display speed
+    public double SpeedOfLight = 0.0; // Current display speed
+
     // Units per second
     private float Acceleration = 15.0f;
     private float TopSpeed = 4.0f * 1609.34f * 600.0f;
@@ -27,7 +31,7 @@ class CharacterController
     private Vector3 FastVelocity = new Vector3(0.0f, 4.0f * 0.44704f * 600.0f, 0.0f);
 
     // Interpolated starting velocity, which peaks at 600 miles per second (assuming the cube things are a meter wide).
-    private Vector3 WarpVelocity = new Vector3(0.0f, 4.0f * 1609.34f * 600.0f, 0.0f);
+    private Vector3 WarpVelocity = new Vector3(0.0f, 4.0f * 1609.344f * 600.0f, 0.0f);
 
     // Degrees per second
     private float TurnSpeed = 30.0f;
@@ -221,8 +225,8 @@ class CharacterController
             const double ToMilesPerHour = 1.0 / (1609.344 / 3600.0);
             const double ToSpeedOfLight = 1.0 / (299792458.0);
             double MetersPerSecond = LinearVelocity.Length() * 0.25;
-            LowRenderer.MilesPerHour = MetersPerSecond * ToMilesPerHour;
-            LowRenderer.SpeedOfLight = Math.Round(MetersPerSecond * ToSpeedOfLight, 4);
+            MilesPerHour = MetersPerSecond * ToMilesPerHour;
+            SpeedOfLight = Math.Round(MetersPerSecond * ToSpeedOfLight, 4);
         }
     }
 }
