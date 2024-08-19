@@ -275,6 +275,7 @@ internal class Program
             TextWidget? PerfSyncTime = null;
             TextWidget? DebugX = null;
             TextWidget? DebugY = null;
+            TextWidget? Heading = null;
 
             {
                 float FontSize = 0.5f;
@@ -318,7 +319,7 @@ internal class Program
                 float FontSize = 0.5f;
                 float Margin = 0.1f;
                 float LineSpacing = -FontSize * 1.25f;
-                float Indent = FontSize * 10.0f + Margin;
+                float Indent = FontSize * 14.0f + Margin;
                 float Line = -Margin + LineSpacing;
 
                 var AddStat = (string Stat) =>
@@ -341,6 +342,7 @@ internal class Program
                 {
                     (_, DebugX) = AddStat("x (miles): ");
                     (_, DebugY) = AddStat("y (miles): ");
+                    (_, Heading) = AddStat("Heading: ");
                     Line += LineSpacing;
                 }
             }
@@ -644,13 +646,47 @@ internal class Program
 
                     Game.Advance(ThisFrame, PlayerState);
 
-                    PerfFrequency?.SetText($" {Double.Round(HighRenderer.CadenceHz, 1):N}");
-                    PerfInterval?.SetText($" {Double.Round(HighRenderer.CadenceMs, 1):N}");
-                    PerfThroughput?.SetText($" {Double.Round(HighRenderer.UpdatesPerFrame):N} ({Double.Round(HighRenderer.Efficiency)}%)");
-                    PerfConvergence?.SetText($" {Double.Round(HighRenderer.ConvergenceTimeMs):N}");
-                    PerfSyncTime?.SetText($" {Double.Round(HighRenderer.UpdateProcessingMs, 1):N}");
+                    PerfFrequency?.SetText($" {Double.Round(HighRenderer.CadenceHz, 1):N1}");
+                    PerfInterval?.SetText($" {Double.Round(HighRenderer.CadenceMs, 1):N1}");
+                    PerfThroughput?.SetText($" {Double.Round(HighRenderer.UpdatesPerFrame):N0} ({Double.Round(HighRenderer.Efficiency)}%)");
+                    PerfConvergence?.SetText($" {Double.Round(HighRenderer.ConvergenceTimeMs):N1}");
+                    PerfSyncTime?.SetText($" {Double.Round(HighRenderer.UpdateProcessingMs, 1):N1}");
                     DebugX?.SetText($" {(HighRenderer.Eye.X / (4.0f * 1609.344f))}");
                     DebugY?.SetText($" {(HighRenderer.Eye.Y / (4.0f * 1609.344f))}");
+                    if (Heading != null)
+                    {
+                        int Dir = ((int)Single.Round(Game.CurrentHeading / 45.0f) + 8) % 8;
+                        switch(Dir)
+                        {
+                            case 0:
+                                Heading.SetText($" North");
+                                break;
+                            case 1:
+                                Heading.SetText($" Northeast");
+                                break;
+                            case 2:
+                                Heading.SetText($" East");
+                                break;
+                            case 3:
+                                Heading.SetText($" Southeast");
+                                break;
+                            case 4:
+                                Heading.SetText($" South");
+                                break;
+                            case 5:
+                                Heading.SetText($" Southwest");
+                                break;
+                            case 6:
+                                Heading.SetText($" West");
+                                break;
+                            case 7:
+                                Heading.SetText($" Northwest");
+                                break;
+                            default:
+                                Heading.SetText($" {Game.CurrentHeading}");
+                                break;
+                        }
+                    }
 
                     {
                         double SpeedometerAlpha = Double.Min(Game.MilesPerHour / 100.0, 1.0);
