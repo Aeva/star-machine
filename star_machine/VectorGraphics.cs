@@ -827,3 +827,68 @@ public class TextWidget : TextureWidget
         return (PixelWidth, PixelHeight, Blob);
     }
 }
+
+
+public abstract class PlutoWidget : TextureWidget
+{
+    public unsafe abstract void RasterizeSurface(plutovg_surface_t* Surface);
+
+    public override (int TexelWidth, int TexelHeight, byte[] SurfaceData) Rasterize()
+    {
+        unsafe
+        {
+            plutovg_surface_t* Surface = plutovg_surface_create(PixelWidth, PixelHeight);
+            RasterizeSurface(Surface);
+
+            byte* Data = plutovg_surface_get_data(Surface);
+            int Stride = plutovg_surface_get_stride(Surface);
+
+            int TexelWidth = plutovg_surface_get_width(Surface);
+            int TexelHeight = plutovg_surface_get_height(Surface);
+            int Size = Stride * TexelHeight;
+            var Blob = new byte[Size];
+            fixed (byte* BlobPtr = Blob)
+            {
+                MemoryCopy(Data, BlobPtr, Size, Size);
+            }
+
+            plutovg_surface_destroy(Surface);
+
+            return (TexelWidth, TexelHeight, Blob);
+        }
+    }
+}
+
+
+public class DialWidget : PlutoWidget
+{
+    public DialWidget(IntPtr InDevice, float InGridWidth, float InGridHeight)
+    {
+        Device = InDevice;
+        GridWidth = InGridWidth;
+        GridHeight = InGridHeight;
+        AlignX = 0.0f;
+        AlignY = -1.0f;
+    }
+
+    public unsafe override void RasterizeSurface(plutovg_surface_t* Surface)
+    {
+        plutovg_canvas_t* Canvas = plutovg_canvas_create(Surface);
+
+        float LineWidth = Grid.PixelDensity * 0.05f;
+        float Radius = ((float)PixelHeight) * 0.5f;
+
+        plutovg_path_t* Path = plutovg_path_create();
+        plutovg_path_add_circle(Path, Radius, Radius, Radius - (LineWidth * 0.5f));
+
+        plutovg_canvas_set_rgba(Canvas, 0.1f, 0.1f, 0.1f, 0.9f);
+        plutovg_canvas_fill_path(Canvas, Path);
+
+        plutovg_canvas_set_rgba(Canvas, 0.0f, 0.0f, 0.0f, 1.0f);
+        plutovg_canvas_set_line_width(Canvas, LineWidth);
+        plutovg_canvas_stroke_path(Canvas, Path);
+
+        plutovg_path_destroy(Path);
+        plutovg_canvas_destroy(Canvas);
+    }
+}

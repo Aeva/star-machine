@@ -369,6 +369,13 @@ internal class Program
                 SpeedometerLabel.Move(0.0f, 0.1f);
             }
 
+#if false
+            var SpeedometerDial = new DialWidget(LowRenderer.Device, 8.0f, 8.0f);
+            SpeedometerDial.OrderHint = -1;
+            SpeedometerDial.Move(0.0f, -2.0f);
+            Screen.BottomCenter.Attachments.Add(SpeedometerDial);
+#endif
+
             Screen.Center.Attachments.Add(Camera);
             Screen.BottomCenter.Attachments.Add(Speedometer);
             Screen.BottomCenter.Attachments.Add(SpeedometerLabel);
