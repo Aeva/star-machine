@@ -7,6 +7,7 @@ using static SDL3.SDL;
 
 using FixedPointTests = FixedPoint.FixedPointTests;
 using FixedInt = FixedPoint.FixedInt;
+using System.Reflection.Emit;
 
 
 namespace StarMachine;
@@ -277,6 +278,9 @@ internal class Program
             TextWidget? DebugY = null;
             TextWidget? Heading = null;
 
+            TextWidget? DebugSpeedValue = null;
+            TextWidget? DebugSpeedLabel = null;
+
             {
                 float FontSize = 0.5f;
                 float Margin = 0.1f;
@@ -342,48 +346,34 @@ internal class Program
                 {
                     (_, DebugX) = AddStat("x (miles): ");
                     (_, DebugY) = AddStat("y (miles): ");
-                    (_, Heading) = AddStat("Heading: ");
+                    (_, Heading) = AddStat("heading: ");
+                    Line += LineSpacing;
+
+                    (DebugSpeedLabel, DebugSpeedValue) = AddStat("speed (mph): ");
                     Line += LineSpacing;
                 }
             }
 
-            var Camera = new SvgWidget(LowRenderer.Device, "Digital_Camera.svg", 5.0f, 1.0f);
-            {
-                Camera.AlignX = 1.0f;
-                Camera.AlignY = 0.0f;
-                Camera.Rotate(0.0f);
-                Camera.Visible = false;
-            }
+            const float SpeedometerSize = 6.0f;
+            const float SpeedometerOffset = SpeedometerSize / 2.4f;
 
-            var Speedometer = new TextWidget(LowRenderer.Device, "0", 1.25f, "Michroma-Regular.ttf");
-            {
-                Speedometer.AlignX = 1.0f;
-                Speedometer.AlignY = -1.0f;
-                Speedometer.Move(0.0f, 0.1f);
-            }
+            /*
+            var SpeedometerShadow = new SvgWidget(LowRenderer.Device, "speedometer_shadow.svg", SpeedometerSize, SpeedometerSize);
+            SpeedometerShadow.OrderHint = -3;
+            SpeedometerShadow.Move(0.0f, SpeedometerOffset);
+            Screen.BottomCenter.Attachments.Add(SpeedometerShadow);
+            */
 
-            var SpeedometerLabel = new TextWidget(LowRenderer.Device, " mph", 1.25f, "Michroma-Regular.ttf");
-            {
-                SpeedometerLabel.AlignX = -1.0f;
-                SpeedometerLabel.AlignY = -1.0f;
-                SpeedometerLabel.Move(0.0f, 0.1f);
-            }
-
-#if true
-            var SpeedometerDial = new DialWidget(LowRenderer.Device, 8.0f);
+            var SpeedometerDial = new SvgWidget(LowRenderer.Device, "speedometer_dial.svg", SpeedometerSize, SpeedometerSize);
             SpeedometerDial.OrderHint = -2;
-            SpeedometerDial.Move(0.0f, -2.0f);
+            SpeedometerDial.Move(0.0f, SpeedometerOffset);
             Screen.BottomCenter.Attachments.Add(SpeedometerDial);
 
-            var SpeedometerNeedle = new NeedleWidget(LowRenderer.Device, 0.2f, 3.5f);
+            var SpeedometerNeedle = new SvgWidget(LowRenderer.Device, "speedometer_needle.svg", SpeedometerSize, SpeedometerSize);
             SpeedometerNeedle.OrderHint = -1;
-            SpeedometerNeedle.Move(0.0f, 2.0f);
+            SpeedometerNeedle.Move(0.0f, SpeedometerOffset);
             Screen.BottomCenter.Attachments.Add(SpeedometerNeedle);
-#endif
 
-            Screen.Center.Attachments.Add(Camera);
-            Screen.BottomCenter.Attachments.Add(Speedometer);
-            Screen.BottomCenter.Attachments.Add(SpeedometerLabel);
             Screen.Rebuild();
 
             while (!Halt)
@@ -700,34 +690,45 @@ internal class Program
                         }
                     }
 
+                    if (Game.MilesPerHour > 7.0)
                     {
-                        double SpeedometerAlpha = Double.Min(Game.MilesPerHour / 135.0, 1.0);
-                        double DialRotation = Double.Lerp(120.0, -120.0, SpeedometerAlpha);
+                        double RotationMultiplier = (Game.MilesPerHour - 10.0) / -10.0;
+                        double DialRotation = 20.0 * RotationMultiplier + 21.0;
                         SpeedometerNeedle.ResetTransform();
-                        SpeedometerNeedle.Move(0.0f, 2.0f);
+                        SpeedometerNeedle.Move(0.0f, SpeedometerOffset);
+                        SpeedometerNeedle.Rotate((float)DialRotation);
+                    }
+                    else
+                    {
+                        double Alpha = Game.MilesPerHour / 7.0;
+                        double RotationMultiplier = (Double.Lerp(6.5, 7.0, Alpha * Alpha * Alpha) - 10.0) / -10.0;
+                        double DialRotation = 20.0 * RotationMultiplier + 21.0;
+                        SpeedometerNeedle.ResetTransform();
+                        SpeedometerNeedle.Move(0.0f, SpeedometerOffset);
                         SpeedometerNeedle.Rotate((float)DialRotation);
                     }
 
+                    if (DebugSpeedLabel != null && DebugSpeedValue != null)
                     {
                         if (Game.SpeedOfLight > 0.0001)
                         {
-                            Speedometer.SetText($"{Game.SpeedOfLight}");
-                            SpeedometerLabel.SetText(" c");
+                            DebugSpeedValue.SetText($" {Game.SpeedOfLight}");
+                            DebugSpeedLabel.SetText("speed (c): ");
                         }
                         else if (Game.MilesPerHour > 1.0)
                         {
-                            Speedometer.SetText($"{Double.Round(Game.MilesPerHour)}");
-                            SpeedometerLabel.SetText(" mph");
+                            DebugSpeedValue.SetText($" {Double.Round(Game.MilesPerHour)}");
+                            DebugSpeedLabel.SetText("speed (mph): ");
                         }
                         else if (Game.MilesPerHour > 0.1)
                         {
-                            Speedometer.SetText($"{Double.Round(Game.MilesPerHour, 1)}");
-                            SpeedometerLabel.SetText(" mph");
+                            DebugSpeedValue.SetText($" {Double.Round(Game.MilesPerHour, 1)}");
+                            DebugSpeedLabel.SetText("speed (mph): ");
                         }
                         else
                         {
-                            Speedometer.SetText($"{Double.Round(Game.MilesPerHour, 2)}");
-                            SpeedometerLabel.SetText(" mph");
+                            DebugSpeedValue.SetText($" {Double.Round(Game.MilesPerHour, 2)}");
+                            DebugSpeedLabel.SetText("speed (mph): ");
                         }
                     }
 
