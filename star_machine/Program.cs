@@ -354,7 +354,7 @@ internal class Program
                 }
             }
 
-            const float SpeedometerSize = 6.0f;
+            const float SpeedometerSize = 7.0f;
             const float SpeedometerOffset = SpeedometerSize / 2.4f;
 
             /*
