@@ -17,7 +17,6 @@ class CharacterController
     private LowLevelRenderer LowRenderer;
     public float CurrentHeading = 0.0f;
 
-
     public double MilesPerHour = 0.0; // Current display speed
     public double SpeedOfLight = 0.0; // Current display speed
 
@@ -27,14 +26,17 @@ class CharacterController
 
     private Vector3 LinearVelocity = Vector3.Zero;
 
-    // Interpolated starting velocity, which peaks at 600 mph (assuming the cube things are a meter wide).
-    private Vector3 FastVelocity = new Vector3(0.0f, 4.0f * 0.44704f * 600.0f, 0.0f);
+    // Interpolated starting velocity, which peaks at 150 mph (assuming the cube things are a meter wide).
+    private Vector3 FastVelocity = new Vector3(0.0f, 4.0f * 0.44704f * 150.0f, 0.0f);
 
     // Interpolated starting velocity, which peaks at 600 miles per second (assuming the cube things are a meter wide).
     private Vector3 WarpVelocity = new Vector3(0.0f, 4.0f * 1609.344f * 600.0f, 0.0f);
 
     // Degrees per second
     private float TurnSpeed = 30.0f;
+
+    // Warp demo is active
+    public bool WarpMode = true;
 
     public CharacterController(HighLevelRenderer InHighRenderer, LowLevelRenderer InLowRenderer)
     {
@@ -49,6 +51,11 @@ class CharacterController
             CurrentHeading = 0.0f;
             HighRenderer.Eye = new Fixie(0.0f, -8.0f, 2.0f);
             HighRenderer.EyeDir = new Vector3(0.0f, 1.0f, 0.0f);
+            WarpMode = false;
+        }
+        if (PlayerState.HardStop)
+        {
+            WarpMode = false;
         }
         if (PlayerState.HardStop || Frame.Number == 0)
         {
@@ -75,25 +82,23 @@ class CharacterController
                 PlayerState.Align = false;
             }
         }
-        bool WarpMode = false;
-        if (Frame.Number > 0 && Frame.Number <= 120)
+        if (WarpMode)
         {
-            WarpMode = true;
-            float Alpha = (float)(Frame.Number) / 120.0f;
-            Alpha = Single.Pow(Alpha, 16.0f);
-            LinearVelocity = Vector3.Lerp(Vector3.Zero, FastVelocity, Alpha);
-        }
-        else if (Frame.Number > 120 && Frame.Number <= 400)
-        {
-            WarpMode = true;
-            LinearVelocity = FastVelocity;
-        }
-        else if (Frame.Number > 400 && Frame.Number <= 520)
-        {
-            WarpMode = true;
-            float Alpha = (float)(Frame.Number - 400) / 120.0f;
-            Alpha = Single.Pow(Alpha, 16.0f);
-            LinearVelocity = Vector3.Lerp(FastVelocity, WarpVelocity, Alpha);
+            if (Frame.Number > 0 && Frame.Number <= 800)
+            {
+                float Alpha = (float)(Frame.Number) / 800.0f;
+                LinearVelocity = Vector3.Lerp(Vector3.Zero, FastVelocity, Alpha);
+            }
+            else if (Frame.Number > 800 && Frame.Number <= 1600)
+            {
+                float Alpha = (float)(Frame.Number - 800) / 800.0f;
+                float Fnord = Single.Pow(Alpha, 16.0f);
+                LinearVelocity = Vector3.Lerp(Vector3.Lerp(FastVelocity, FastVelocity * 2.0f, Alpha), WarpVelocity, Fnord);
+            }
+            else if (Frame.Number > 1600)
+            {
+                WarpMode = false;
+            }
         }
 
         float Seconds = (float)(Frame.ElapsedMs / 1000.0);

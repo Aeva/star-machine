@@ -442,6 +442,7 @@ internal class Program
 
                             case SDL.SDL_Scancode.SDL_SCANCODE_Z:
                                 ThisFrame.Number = 0;
+                                Game.WarpMode = true;
                                 break;
                         }
                     }
