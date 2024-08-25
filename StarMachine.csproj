@@ -29,6 +29,9 @@
     <EmbeddedResource Include="star_machine.bmp" />
     <EmbeddedResource Include="third_party/*/*.ttf" />
     <EmbeddedResource Include="third_party/*/*.svg" />
+    <EmbeddedResource Include="svg/*_dial.svg" />
+    <EmbeddedResource Include="svg/*_needle.svg" />
+    <EmbeddedResource Include="svg/*_shadow.svg" />
   </ItemGroup>
 
 </Project>
