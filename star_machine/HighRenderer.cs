@@ -22,6 +22,8 @@ using ConcurrentSurfelQueue = ConcurrentQueue<List<(Fixie Position, Vector3 Colo
 class HighLevelRenderer
 {
     public TracingGrist Model;
+    public TracingGrist Floor;
+    public TracingGrist Stuff;
 
     private RenderingConfig Settings;
 
@@ -104,6 +106,8 @@ class HighLevelRenderer
             Plane(0.0f, 0.0f, 1.0f);
 
             Model = new TracingGrist(Union(Ground, BasicThing));
+            Floor = new TracingGrist(Ground);
+            Stuff = new TracingGrist(BasicThing);
         }
     }
 
@@ -370,14 +374,57 @@ class HighLevelRenderer
                 var Start = CachedEye;
                 var Stop = RayDir * 10_000.0f + CachedEye;
 
+                bool Mirror = false;
+                float FirstTravel = 0.0f;
+                float MirrorTravel = 0.0f;
+
+                var MirrorColor = new Vector3(0.0f, 0.0f, 0.0f);
+
                 if (Start != Stop)
                 {
-                    (bool Hit, Vector3 Position) = Model.Trace(Start, Stop);
+                    (bool Hit, FirstTravel) = Model.TravelTrace(Start, RayDir, 10_000.0f, 0.0f);
+                    Vector3 Position = RayDir * FirstTravel + Start;
+
+                    if (Hit)
+                    {
+                        float FloorDist = Floor.Eval(Position);
+                        float StuffDist = Stuff.Eval(Position);
+                        if (FloorDist < StuffDist)
+                        {
+                            {
+                                var Normal = Model.Gradient(Position);
+
+                                for (int LightIndex = 0; LightIndex < LightPoints.Length; ++LightIndex)
+                                {
+                                    var LightPoint = (LightPoints[LightIndex] + MovementProjection - RelativeTracingOrigin).ToVector3();
+                                    var LightColor = LightColors[LightIndex];
+
+                                    var Offset = Normal * 0.01f + Position;
+                                    float Visibility = Model.LightTrace(Normal * 0.01f + Position, LightPoint, 0.1f);
+
+                                    if (Visibility > 0.0f)
+                                    {
+                                        var LightRay = Vector3.Normalize(LightPoint - Position);
+
+                                        float Luminence = Math.Max(Vector3.Dot(LightRay, Normal), 0.0f) * Visibility;
+
+                                        MirrorColor += LightColor * Luminence;
+                                    }
+                                }
+                            }
+
+                            Mirror = true;
+                            Vector3 MirrorRay = Vector3.Reflect(RayDir, Vector3.UnitZ);
+                            (Hit, MirrorTravel) = Stuff.TravelTrace(Position, MirrorRay, 10_000.0f, 0.0f);
+                            Position = MirrorRay * MirrorTravel + Position;
+                        }
+                    }
+
                     if (Hit)
                     {
                         var Normal = Model.Gradient(Position);
-
                         var SplatColor = new Vector3(0.0f, 0.0f, 0.0f);
+
                         for (int LightIndex = 0; LightIndex < LightPoints.Length; ++LightIndex)
                         {
                             var LightPoint = (LightPoints[LightIndex] + MovementProjection - RelativeTracingOrigin).ToVector3();
@@ -395,15 +442,34 @@ class HighLevelRenderer
                                 SplatColor += LightColor * Luminence;
                             }
                         }
+#if true
+                        Position = RayDir * (FirstTravel) + Start;
+#else
+                        Position = RayDir * (FirstTravel + MirrorTravel) + Start;
+#endif
                         Fixie SplatPosition = RelativeTracingOrigin + new Fixie(Position);
+                        if (Mirror)
+                        {
+                            //SplatColor = (SplatColor * MirrorColor);
+                            float Fnord = Single.Min(MirrorTravel / 20.0f, 0.5f);
+                            SplatColor = Vector3.Lerp(SplatColor, MissColor, Fnord) * Vector3.Lerp(MirrorColor, MissColor, Fnord);
+                        }
                         NewSurfels.Add((SplatPosition, SplatColor));
                         continue;
                     }
                 }
                 {
-                    //NewSurfels.Add((new Vector4(Stop, 1.0f), new Vector4(-RayDir, 1.0f), Color.CornflowerBlue));
-                    Fixie SplatPosition = RelativeTracingOrigin + new Fixie(Stop);
-                    NewSurfels.Add((SplatPosition, MissColor));
+                    if (Mirror)
+                    {
+                        Vector3 Position = RayDir * FirstTravel + Start;
+                        Fixie SplatPosition = RelativeTracingOrigin + new Fixie(Position);
+                        NewSurfels.Add((SplatPosition, MirrorColor));
+                    }
+                    else
+                    {
+                        Fixie SplatPosition = RelativeTracingOrigin + new Fixie(Stop);
+                        NewSurfels.Add((SplatPosition, MissColor));
+                    }
                     continue;
                 }
             }
