@@ -209,23 +209,29 @@ class HighLevelRenderer
             SurfelList? SurfelBatch;
             while (ElapsedTicks < UpdateTimeSlice && PendingSurfels.TryDequeue(out SurfelBatch))
             {
-                foreach (var Surfel in SurfelBatch)
+                if (!PlayerState.Paused)
                 {
-                    (Fixie Position, Vector3 Color) = Surfel;
+                    foreach (var Surfel in SurfelBatch)
+                    {
+                        (Fixie Position, Vector3 Color) = Surfel;
 
-                    PositionUpload[WriteCursor] = Position;
-                    ColorUpload[WriteCursor] = Color;
-                    WriteCursor = (WriteCursor + 1) % (uint)Settings.MaxSurfels;
-                    LiveSurfels = Math.Min(LiveSurfels + 1, (uint)Settings.MaxSurfels);
+                        PositionUpload[WriteCursor] = Position;
+                        ColorUpload[WriteCursor] = Color;
+                        WriteCursor = (WriteCursor + 1) % (uint)Settings.MaxSurfels;
+                        LiveSurfels = Math.Min(LiveSurfels + 1, (uint)Settings.MaxSurfels);
+                    }
+                    Processed += SurfelBatch.Count;
+                    ElapsedTicks = DateTime.UtcNow.Ticks - StartTime;
                 }
-                Processed += SurfelBatch.Count;
-                ElapsedTicks = DateTime.UtcNow.Ticks - StartTime;
             }
 
             double ElapsedCopyTimeMs = (double)ElapsedTicks / (double)TimeSpan.TicksPerMillisecond;
 
-            SplatCopyCount.LogQuantity(Processed);
-            SplatCopyTime.LogQuantity(ElapsedCopyTimeMs);
+            if (!PlayerState.Paused)
+            {
+                SplatCopyCount.LogQuantity(Processed);
+                SplatCopyTime.LogQuantity(ElapsedCopyTimeMs);
+            }
         }
 
         SplatDiameter = Single.Lerp(FineDiameter, CoarseDiameter, GrainAlpha);

@@ -651,9 +651,12 @@ internal class Program
 
                     PerfFrequency?.SetText($" {Double.Round(HighRenderer.CadenceHz, 1):N1}");
                     PerfInterval?.SetText($" {Double.Round(HighRenderer.CadenceMs, 1):N1}");
-                    PerfThroughput?.SetText($" {Double.Round(HighRenderer.UpdatesPerFrame):N0} ({Double.Round(HighRenderer.Efficiency)}%)");
-                    PerfConvergence?.SetText($" {Double.Round(HighRenderer.ConvergenceTimeMs):N1}");
-                    PerfSyncTime?.SetText($" {Double.Round(HighRenderer.UpdateProcessingMs, 1):N1}");
+                    if (!PlayerState.Paused)
+                    {
+                        PerfThroughput?.SetText($" {Double.Round(HighRenderer.UpdatesPerFrame):N0} ({Double.Round(HighRenderer.Efficiency)}%)");
+                        PerfConvergence?.SetText($" {Double.Round(HighRenderer.ConvergenceTimeMs):N1}");
+                        PerfSyncTime?.SetText($" {Double.Round(HighRenderer.UpdateProcessingMs, 1):N1}");
+                    }
                     DebugX?.SetText($" {(HighRenderer.Eye.X / (4.0f * 1609.344f))}");
                     DebugY?.SetText($" {(HighRenderer.Eye.Y / (4.0f * 1609.344f))}");
                     if (Heading != null)
