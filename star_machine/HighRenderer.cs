@@ -277,8 +277,6 @@ class HighLevelRenderer
 
         var TracingPartitioner = Partitioner.Create(0, Settings.TracingRate);
 
-        Vector3 MissColor = new Vector3(0.2f, 0.2f, 0.2f);
-
         Parallel.ForEach(TracingPartitioner, (SliceParams, LoopState) =>
         {
             int SliceStart = SliceParams.Item1;
@@ -374,6 +372,32 @@ class HighLevelRenderer
                 var Start = CachedEye;
                 var Stop = RayDir * 10_000.0f + CachedEye;
 
+                Vector3 MissColor = Vector3.Zero;
+                {
+                    // This will need to be revised if the view can ever face away from the horizon.
+                    float SkyAlpha = 1.0f - Single.Abs(RayDir.Z);
+                    SkyAlpha = SkyAlpha * SkyAlpha;
+                    SkyAlpha = SkyAlpha * SkyAlpha;
+                    SkyAlpha = 1.0f - SkyAlpha;
+                    Vector3[] SkyGradient = {
+                        Vector3.One,
+                        new Vector3(1.5f, 0.4f, 0.4f),
+                        new Vector3(0.2f, 0.2f, 0.2f),
+                        new Vector3(0.2f, 0.2f, 0.2f),
+                        new Vector3(0.2f, 0.2f, 0.2f),
+                        new Vector3(0.2f, 0.2f, 0.2f),
+                        new Vector3(0.2f, 0.2f, 0.2f),
+                        new Vector3(0.1f, 0.1f, 0.1f),
+                    };
+
+                    MissColor = SkyGradient[0];
+
+                    for (int Tail = 1; Tail < SkyGradient.Count(); ++Tail)
+                    {
+                        MissColor = Vector3.Lerp(MissColor, SkyGradient[Tail], SkyAlpha);
+                    }
+                }
+
                 bool Mirror = false;
                 float FirstTravel = 0.0f;
                 float MirrorTravel = 0.0f;
@@ -442,9 +466,11 @@ class HighLevelRenderer
                                 SplatColor += LightColor * Luminence;
                             }
                         }
-#if true
+#if false
+                        // This places the reflection splats on the surface of the mirror.
                         Position = RayDir * (FirstTravel) + Start;
 #else
+                        // This places the reflection splats in world space as if the mirror were a window.
                         Position = RayDir * (FirstTravel + MirrorTravel) + Start;
 #endif
                         Fixie SplatPosition = RelativeTracingOrigin + new Fixie(Position);

@@ -44,7 +44,6 @@ void main()
     ViewPosition.z += LocalVertexOffset.z * SplatDepth;
 
     float WarpTail = min(MovementProjection.w, 1000.0f);
-    float WarpFactor = WarpTail / 1000.0f;
     vec4 WarpOffset = vec4(ViewPosition.xyz + (MovementProjection.xyz * WarpTail), 1.0f);
 
     vec4 WarpClip = ViewToClip * WarpOffset;
