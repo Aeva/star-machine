@@ -44,6 +44,9 @@ public class RenderingConfig
     // Start in fullscreen mode.
     public bool Fullscreen = true;
 
+    // When true, this enables validation layers.
+    public bool DebugMode = false;
+
     // Whether to use paraboloids or discs.
     public bool ParaboloidSplats = true;
 

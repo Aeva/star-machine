@@ -239,8 +239,8 @@ class LowLevelRenderer
     public bool Boot(RenderingConfig Settings)
     {
         {
-            Console.WriteLine($"PlutoVG {plutovg_version_string()}");
-            Console.WriteLine($"PlutoSVG {plutosvg_version_string()}");
+            Console.WriteLine($"PlutoVG version: {plutovg_version_string()}");
+            Console.WriteLine($"PlutoSVG version: {plutosvg_version_string()}");
         }
 
         if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) < 0)
@@ -268,7 +268,7 @@ class LowLevelRenderer
         }
 
         {
-            const int DebugMode = 1;
+            int DebugMode = Settings.DebugMode ? 1 : 0;
             const int PreferLowPower = 0;
             var Drivers = new string[]
             {
