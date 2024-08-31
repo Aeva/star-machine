@@ -382,8 +382,8 @@ class HighLevelRenderer
                     Vector3[] SkyGradient = {
                         Vector3.One,
                         new Vector3(1.5f, 0.4f, 0.4f),
-                        new Vector3(0.2f, 0.2f, 0.2f),
-                        new Vector3(0.2f, 0.2f, 0.2f),
+                        new Vector3(0.5f, 0.2f, 0.2f),
+                        new Vector3(0.5f, 0.2f, 0.2f),
                         new Vector3(0.2f, 0.2f, 0.2f),
                         new Vector3(0.2f, 0.2f, 0.2f),
                         new Vector3(0.2f, 0.2f, 0.2f),
