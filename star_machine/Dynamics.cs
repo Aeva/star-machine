@@ -124,17 +124,12 @@ class CharacterController
 
         if (Math.Abs(Turn) > 0.001)
         {
-            HighRenderer.Turning = Math.Clamp(HighRenderer.Turning += Turn, -1.0f, 1.0f);
             CurrentHeading = (CurrentHeading + Turn) % 360.0f;
             float Radians = (float)(Math.PI / 180.0) * CurrentHeading;
             HighRenderer.EyeDir.X = (float)Math.Sin(Radians);
             HighRenderer.EyeDir.Y = (float)Math.Cos(Radians);
             HighRenderer.EyeDir.Z = 0.0f;
             HighRenderer.EyeDir = Vector3.Normalize(HighRenderer.EyeDir);
-        }
-        else
-        {
-            HighRenderer.Turning = 0.0f;
         }
 
         if (PlayerState.Gas > 0.0f && !PlayerState.HardStop)

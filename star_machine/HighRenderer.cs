@@ -34,7 +34,6 @@ class HighLevelRenderer
     private float CoarseDiameter = 0.0f; // Coarse grain diameter.
 
     // Maybe these belong on the character controller class instead?
-    public float Turning = 0.0f;
     public float Tunneling = 0.25f;
     public float GrainAlpha = 1.0f;
 
@@ -313,10 +312,10 @@ class HighLevelRenderer
                     ClipTarget.W = 1;
 
 #if true
-                    if (Tunneling > 0.0f || Math.Abs(Turning) > 0.0f)
+                    if (Tunneling > 0.0f)
                     {
                         Vector2 Offset;
-                        Offset.X = 0.5f * Turning;
+                        Offset.X = 0.0f;
                         Offset.Y = 0.0f;
 
                         Vector2 Scale;
@@ -341,7 +340,7 @@ class HighLevelRenderer
                         }
                         Point = Point * Scale + Offset;
 
-                        float Alpha = Math.Max(Tunneling * 0.75f, Math.Abs(Turning) * 0.5f);
+                        float Alpha = Tunneling * 0.75f;
                         ClipTarget.X = Single.Lerp(ClipTarget.X, Point.X, Alpha);
                         ClipTarget.Y = Single.Lerp(ClipTarget.Y, Point.Y, Alpha);
                     }
