@@ -137,7 +137,7 @@ struct PerformerStatus
 
     public float Turn;
 
-    public float Clutch;
+    //public float Clutch;
     public float Brake;
     public float Gas;
 
@@ -261,8 +261,8 @@ internal class Program
             JoyStick LeftStick = new JoyStick();
             JoyStick RightStick = new JoyStick();
 
-            double IdleRumbleLow = 0.0;
-            double IdleRumbleHigh = 100.0;
+            //double IdleRumbleLow = 0.0;
+            //double IdleRumbleHigh = 100.0;
 
             SDL.SDL_HideCursor();
 
