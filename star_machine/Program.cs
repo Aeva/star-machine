@@ -44,6 +44,12 @@ public class RenderingConfig
     // Start in fullscreen mode.
     public bool Fullscreen = true;
 
+    // Preferred present mode.
+    public SDL_GpuPresentMode PresentMode = SDL_GpuPresentMode.SDL_GPU_PRESENTMODE_VSYNC;
+
+    // Preferred swapchain composition.
+    public SDL_GpuSwapchainComposition SwapchainComposition = SDL.SDL_GpuSwapchainComposition.SDL_GPU_SWAPCHAINCOMPOSITION_SDR;
+
     // When true, this enables validation layers.
     public bool DebugMode = false;
 
@@ -210,8 +216,32 @@ internal class Program
         }
     }
 
-    static void Main(string[] args)
+    static void Main(string[] Args)
     {
+        foreach (string Arg in Args)
+        {
+            if (Arg == "--vsync")
+            {
+                Settings.PresentMode = SDL_GpuPresentMode.SDL_GPU_PRESENTMODE_VSYNC;
+            }
+            if (Arg == "--immediate" || Arg == "--novsync")
+            {
+                Settings.PresentMode = SDL_GpuPresentMode.SDL_GPU_PRESENTMODE_IMMEDIATE;
+            }
+            if (Arg == "--mailbox")
+            {
+                Settings.PresentMode = SDL_GpuPresentMode.SDL_GPU_PRESENTMODE_MAILBOX;
+            }
+            if (Arg == "--fullscreen")
+            {
+                Settings.Fullscreen = true;
+            }
+            if (Arg == "--windowed")
+            {
+                Settings.Fullscreen = false;
+            }
+        }
+
 #if true
         {
             FixedPointTests.PreflightCheck();

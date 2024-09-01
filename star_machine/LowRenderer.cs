@@ -294,12 +294,31 @@ class LowLevelRenderer
             return true;
         }
 
-        if (SDL_GpuClaimWindow(Device, Window, SDL.SDL_GpuSwapchainComposition.SDL_GPU_SWAPCHAINCOMPOSITION_SDR, SDL.SDL_GpuPresentMode.SDL_GPU_PRESENTMODE_VSYNC) == 0)
+        if (SDL_GpuSupportsSwapchainComposition(Device, Window, Settings.SwapchainComposition) == 0)
+        {
+            Console.WriteLine($"Requested swapchain composition is unavailable: {Settings.SwapchainComposition.ToString()}");
+            // SDL_GPU_SWAPCHAINCOMPOSITION_SDR is always supported.
+            Settings.SwapchainComposition = SDL.SDL_GpuSwapchainComposition.SDL_GPU_SWAPCHAINCOMPOSITION_SDR;
+        }
+
+        if (SDL_GpuSupportsPresentMode(Device, Window, Settings.PresentMode) == 0)
+        {
+            Console.WriteLine($"Requested present mode is unavailable: {Settings.PresentMode.ToString()}");
+            // SDL_GPU_PRESENTMODE_VSYNC is always supported.
+            Settings.PresentMode = SDL.SDL_GpuPresentMode.SDL_GPU_PRESENTMODE_VSYNC;
+        }
+
+        if (SDL_GpuClaimWindow(Device, Window, Settings.SwapchainComposition, Settings.PresentMode) == 0)
         {
             SDL_GpuDestroyDevice(Device);
             SDL_DestroyWindow(Window);
             Console.WriteLine("SDL3 failed to attach Window to GPU device.");
             return true;
+        }
+        else
+        {
+            Console.WriteLine($"Swapchain composition: {Settings.SwapchainComposition.ToString()}");
+            Console.WriteLine($"Present mode: {Settings.PresentMode.ToString()}");
         }
 
         SDL_GpuTextureCreateInfo ColorTextureDesc;
@@ -868,206 +887,217 @@ class LowLevelRenderer
         UploadFixies(SplatWorldPositionBuffer_L, SplatWorldPositionBuffer_H, HighRenderer.PositionUpload, true);
         UploadVector3s(SplatColorBuffer, HighRenderer.ColorUpload, true);
 
-        IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
-        if (CommandBuffer == IntPtr.Zero)
+        IntPtr CommandBuffer = IntPtr.Zero;
+        IntPtr SwapchainTexture = IntPtr.Zero;
+        UInt32 Width = 0;
+        UInt32 Height = 0;
+        while (SwapchainTexture == IntPtr.Zero)
         {
-            Console.WriteLine("GpuAcquireCommandBuffer failed.");
-            return true;
+            if (CommandBuffer != IntPtr.Zero)
+            {
+                SDL_GpuSubmit(CommandBuffer);
+            }
+
+            CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
+            if (CommandBuffer == IntPtr.Zero)
+            {
+                Console.WriteLine("GpuAcquireCommandBuffer failed.");
+                return true;
+            }
+
+            (SwapchainTexture, Width, Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
         }
 
-        (IntPtr SwapchainTexture, UInt32 Width, UInt32 Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
-        if (SwapchainTexture != IntPtr.Zero)
+        if (Overlay != null)
         {
+            Overlay.Advance(Frame);
+        }
+
+        ViewInfoUpload ViewInfo;
+        {
+            ViewInfo.WorldToView = HighRenderer.WorldToView;
+            ViewInfo.ViewToClip = HighRenderer.ViewToClip;
+
+            ViewInfo.MovementProjection = new();
+            {
+                (Fixie Dir, FixedInt Mag) = Fixie.Normalize(HighRenderer.MovementProjection);
+                Vector4 WorldDir = Dir.ToVector4();
+                Vector4 ViewDir = Vector4.Transform(WorldDir, HighRenderer.WorldToView);
+                ViewDir /= ViewDir.W;
+                ViewInfo.MovementProjection[0] = ViewDir[0];
+                ViewInfo.MovementProjection[1] = ViewDir[1];
+                ViewInfo.MovementProjection[2] = ViewDir[2];
+                ViewInfo.MovementProjection[3] = (float)Mag;
+            }
+
+            ViewInfo.EyeWorldPosition_L = new();
+            ViewInfo.EyeWorldPosition_H = new();
+            for (int Lane = 0; Lane < 3; ++Lane)
+            {
+                (UInt32 Low, UInt32 High) = HighRenderer.Eye.Lanes[Lane].Split();
+                ViewInfo.EyeWorldPosition_L[Lane] = Low;
+                ViewInfo.EyeWorldPosition_H[Lane] = High;
+            }
+
+            ViewInfo.SplatDiameter = HighRenderer.SplatDiameter;
+            ViewInfo.SplatDepth = Settings.SplatDepth;
+            ViewInfo.AspectRatio = Frame.AspectRatio;
+        }
+
+        SDL_GpuViewport Viewport;
+        {
+            Viewport.x = 0;
+            Viewport.y = 0;
+            Viewport.w = Width;
+            Viewport.h = Height;
+            Viewport.minDepth = 0.1f;
+            Viewport.maxDepth = 1.0f;
+        }
+
+        SDL_Rect ScissorRect;
+        {
+            ScissorRect.x = 0;
+            ScissorRect.y = 0;
+            ScissorRect.w = (int)Width;
+            ScissorRect.h = (int)Height;
+        }
+
+        unsafe
+        {
+            SDL_GpuPushVertexUniformData(CommandBuffer, 0, &ViewInfo, (uint)sizeof(ViewInfoUpload));
+
+            {
+                SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
+                {
+                    ColorAttachmentInfo.textureSlice.texture = ColorTexture;
+                    ColorAttachmentInfo.clearColor.r = 0.0f;
+                    ColorAttachmentInfo.clearColor.g = 0.0f;
+                    ColorAttachmentInfo.clearColor.b = 0.0f;
+                    ColorAttachmentInfo.clearColor.a = 1.0f;
+                    ColorAttachmentInfo.loadOp = DebugClear ? SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_CLEAR : SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_LOAD;
+                    ColorAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_STORE;
+                    ColorAttachmentInfo.cycle = 0;
+                }
+
+                SDL_GpuDepthStencilAttachmentInfo DepthStencilAttachmentInfo;
+                {
+                    DepthStencilAttachmentInfo.textureSlice.texture = DepthTexture;
+                    DepthStencilAttachmentInfo.depthStencilClearValue.depth = 1;
+                    DepthStencilAttachmentInfo.depthStencilClearValue.stencil = 0;
+                    DepthStencilAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_CLEAR;
+                    DepthStencilAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_DONT_CARE;
+                    DepthStencilAttachmentInfo.stencilLoadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_DONT_CARE;
+                    DepthStencilAttachmentInfo.stencilStoreOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_DONT_CARE;
+                    DepthStencilAttachmentInfo.cycle = 0;
+                }
+
+                Span<SDL_GpuBufferBinding> VertexBufferBindings = stackalloc SDL_GpuBufferBinding[4];
+                {
+                    VertexBufferBindings[0].buffer = SplatVertexBuffer;
+                    VertexBufferBindings[0].offset = 0;
+                    VertexBufferBindings[1].buffer = SplatWorldPositionBuffer_L;
+                    VertexBufferBindings[1].offset = 0;
+                    VertexBufferBindings[2].buffer = SplatWorldPositionBuffer_H;
+                    VertexBufferBindings[2].offset = 0;
+                    VertexBufferBindings[3].buffer = SplatColorBuffer;
+                    VertexBufferBindings[3].offset = 0;
+                }
+
+                SDL_GpuBufferBinding IndexBufferBinding;
+                {
+                    IndexBufferBinding.buffer = SplatIndexBuffer;
+                    IndexBufferBinding.offset = 0;
+                }
+
+                IntPtr SurfelPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, &DepthStencilAttachmentInfo);
+                SDL_GpuPushDebugGroup(CommandBuffer, "Surfel Pass"u8);
+                {
+                    SDL_GpuBindGraphicsPipeline(SurfelPass, SurfelPipeline);
+                    SDL_GpuSetViewport(SurfelPass, &Viewport);
+                    SDL_GpuSetScissor(SurfelPass, &ScissorRect);
+
+                    if (HighRenderer.LiveSurfels > 0)
+                    {
+                        fixed (SDL_GpuBufferBinding* VertexBufferBindingsPtr = VertexBufferBindings)
+                        {
+                            SDL_GpuBindVertexBuffers(SurfelPass, 0, VertexBufferBindingsPtr, 4);
+                        }
+                        SDL_GpuBindIndexBuffer(
+                            SurfelPass, &IndexBufferBinding, SDL_GpuIndexElementSize.SDL_GPU_INDEXELEMENTSIZE_16BIT);
+                        SDL_GpuDrawIndexedPrimitives(SurfelPass, 0, 0, SplatMesh.TriangleCount * 3, HighRenderer.LiveSurfels);
+                    }
+                }
+                SDL_GpuPopDebugGroup(CommandBuffer);
+                SDL_GpuEndRenderPass(SurfelPass);
+            }
+
+            {
+                SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
+                {
+                    ColorAttachmentInfo.textureSlice.texture = SwapchainTexture;
+                    ColorAttachmentInfo.clearColor.r = 0.0f;
+                    ColorAttachmentInfo.clearColor.g = 0.0f;
+                    ColorAttachmentInfo.clearColor.b = 0.0f;
+                    ColorAttachmentInfo.clearColor.a = 1.0f;
+
+                    ColorAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_DONT_CARE;
+                    ColorAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_STORE;
+                    ColorAttachmentInfo.cycle = 0;
+                }
+
+                IntPtr RevealPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, null);
+                SDL_GpuPushDebugGroup(CommandBuffer, "Reveal Pass"u8);
+                {
+                    SDL_GpuBindGraphicsPipeline(RevealPass, RevealPipeline);
+                    SDL_GpuSetViewport(RevealPass, &Viewport);
+                    SDL_GpuSetScissor(RevealPass, &ScissorRect);
+
+                    Span<SDL_GpuTextureSlice> TextureBindings = stackalloc SDL_GpuTextureSlice[1];
+                    {
+                        TextureBindings[0].texture = ColorTexture;
+                        TextureBindings[0].mipLevel = 0;
+                        TextureBindings[0].layer = 0;
+                    }
+
+                    fixed (SDL_GpuTextureSlice* TextureBindingsPtr = TextureBindings)
+                    {
+                        SDL_GpuBindFragmentStorageTextures(RevealPass, 0, TextureBindingsPtr, 1);
+                    }
+                    SDL_GpuDrawPrimitives(RevealPass, 0, 3);
+                }
+                SDL_GpuPopDebugGroup(CommandBuffer);
+                SDL_GpuEndRenderPass(RevealPass);
+            }
+
             if (Overlay != null)
             {
-                Overlay.Advance(Frame);
-            }
-
-            ViewInfoUpload ViewInfo;
-            {
-                ViewInfo.WorldToView = HighRenderer.WorldToView;
-                ViewInfo.ViewToClip = HighRenderer.ViewToClip;
-
-                ViewInfo.MovementProjection = new();
+                SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
                 {
-                    (Fixie Dir, FixedInt Mag) = Fixie.Normalize(HighRenderer.MovementProjection);
-                    Vector4 WorldDir = Dir.ToVector4();
-                    Vector4 ViewDir = Vector4.Transform(WorldDir, HighRenderer.WorldToView);
-                    ViewDir /= ViewDir.W;
-                    ViewInfo.MovementProjection[0] = ViewDir[0];
-                    ViewInfo.MovementProjection[1] = ViewDir[1];
-                    ViewInfo.MovementProjection[2] = ViewDir[2];
-                    ViewInfo.MovementProjection[3] = (float)Mag;
+                    ColorAttachmentInfo.textureSlice.texture = SwapchainTexture;
+                    ColorAttachmentInfo.clearColor.r = 0.0f;
+                    ColorAttachmentInfo.clearColor.g = 0.0f;
+                    ColorAttachmentInfo.clearColor.b = 0.0f;
+                    ColorAttachmentInfo.clearColor.a = 1.0f;
+
+                    ColorAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_LOAD;
+                    ColorAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_STORE;
+                    ColorAttachmentInfo.cycle = 0;
                 }
 
-                ViewInfo.EyeWorldPosition_L = new();
-                ViewInfo.EyeWorldPosition_H = new();
-                for (int Lane = 0; Lane < 3; ++Lane)
+                IntPtr OverlayPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, null);
+                SDL_GpuPushDebugGroup(CommandBuffer, "Overlay Pass"u8);
                 {
-                    (UInt32 Low, UInt32 High) = HighRenderer.Eye.Lanes[Lane].Split();
-                    ViewInfo.EyeWorldPosition_L[Lane] = Low;
-                    ViewInfo.EyeWorldPosition_H[Lane] = High;
+                    SDL_GpuBindGraphicsPipeline(OverlayPass, OverlayPipeline);
+                    SDL_GpuSetViewport(OverlayPass, &Viewport);
+                    SDL_GpuSetScissor(OverlayPass, &ScissorRect);
+
+                    Overlay.Draw(OverlayPass);
                 }
-
-                ViewInfo.SplatDiameter = HighRenderer.SplatDiameter;
-                ViewInfo.SplatDepth = Settings.SplatDepth;
-                ViewInfo.AspectRatio = Frame.AspectRatio;
-            }
-
-            SDL_GpuViewport Viewport;
-            {
-                Viewport.x = 0;
-                Viewport.y = 0;
-                Viewport.w = Width;
-                Viewport.h = Height;
-                Viewport.minDepth = 0.1f;
-                Viewport.maxDepth = 1.0f;
-            }
-
-            SDL_Rect ScissorRect;
-            {
-                ScissorRect.x = 0;
-                ScissorRect.y = 0;
-                ScissorRect.w = (int)Width;
-                ScissorRect.h = (int)Height;
-            }
-
-            unsafe
-            {
-                SDL_GpuPushVertexUniformData(CommandBuffer, 0, &ViewInfo, (uint)sizeof(ViewInfoUpload));
-
-                {
-                    SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
-                    {
-                        ColorAttachmentInfo.textureSlice.texture = ColorTexture;
-                        ColorAttachmentInfo.clearColor.r = 0.0f;
-                        ColorAttachmentInfo.clearColor.g = 0.0f;
-                        ColorAttachmentInfo.clearColor.b = 0.0f;
-                        ColorAttachmentInfo.clearColor.a = 1.0f;
-                        ColorAttachmentInfo.loadOp = DebugClear ? SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_CLEAR : SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_LOAD;
-                        ColorAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_STORE;
-                        ColorAttachmentInfo.cycle = 0;
-                    }
-
-                    SDL_GpuDepthStencilAttachmentInfo DepthStencilAttachmentInfo;
-                    {
-                        DepthStencilAttachmentInfo.textureSlice.texture = DepthTexture;
-                        DepthStencilAttachmentInfo.depthStencilClearValue.depth = 1;
-                        DepthStencilAttachmentInfo.depthStencilClearValue.stencil = 0;
-                        DepthStencilAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_CLEAR;
-                        DepthStencilAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_DONT_CARE;
-                        DepthStencilAttachmentInfo.stencilLoadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_DONT_CARE;
-                        DepthStencilAttachmentInfo.stencilStoreOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_DONT_CARE;
-                        DepthStencilAttachmentInfo.cycle = 0;
-                    }
-
-                    Span<SDL_GpuBufferBinding> VertexBufferBindings = stackalloc SDL_GpuBufferBinding[4];
-                    {
-                        VertexBufferBindings[0].buffer = SplatVertexBuffer;
-                        VertexBufferBindings[0].offset = 0;
-                        VertexBufferBindings[1].buffer = SplatWorldPositionBuffer_L;
-                        VertexBufferBindings[1].offset = 0;
-                        VertexBufferBindings[2].buffer = SplatWorldPositionBuffer_H;
-                        VertexBufferBindings[2].offset = 0;
-                        VertexBufferBindings[3].buffer = SplatColorBuffer;
-                        VertexBufferBindings[3].offset = 0;
-                    }
-
-                    SDL_GpuBufferBinding IndexBufferBinding;
-                    {
-                        IndexBufferBinding.buffer = SplatIndexBuffer;
-                        IndexBufferBinding.offset = 0;
-                    }
-
-                    IntPtr SurfelPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, &DepthStencilAttachmentInfo);
-                    SDL_GpuPushDebugGroup(CommandBuffer, "Surfel Pass"u8);
-                    {
-                        SDL_GpuBindGraphicsPipeline(SurfelPass, SurfelPipeline);
-                        SDL_GpuSetViewport(SurfelPass, &Viewport);
-                        SDL_GpuSetScissor(SurfelPass, &ScissorRect);
-
-                        if (HighRenderer.LiveSurfels > 0)
-                        {
-                            fixed (SDL_GpuBufferBinding* VertexBufferBindingsPtr = VertexBufferBindings)
-                            {
-                                SDL_GpuBindVertexBuffers(SurfelPass, 0, VertexBufferBindingsPtr, 4);
-                            }
-                            SDL_GpuBindIndexBuffer(
-                                SurfelPass, &IndexBufferBinding, SDL_GpuIndexElementSize.SDL_GPU_INDEXELEMENTSIZE_16BIT);
-                            SDL_GpuDrawIndexedPrimitives(SurfelPass, 0, 0, SplatMesh.TriangleCount * 3, HighRenderer.LiveSurfels);
-                        }
-                    }
-                    SDL_GpuPopDebugGroup(CommandBuffer);
-                    SDL_GpuEndRenderPass(SurfelPass);
-                }
-
-                {
-                    SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
-                    {
-                        ColorAttachmentInfo.textureSlice.texture = SwapchainTexture;
-                        ColorAttachmentInfo.clearColor.r = 0.0f;
-                        ColorAttachmentInfo.clearColor.g = 0.0f;
-                        ColorAttachmentInfo.clearColor.b = 0.0f;
-                        ColorAttachmentInfo.clearColor.a = 1.0f;
-
-                        ColorAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_DONT_CARE;
-                        ColorAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_STORE;
-                        ColorAttachmentInfo.cycle = 0;
-                    }
-
-                    IntPtr RevealPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, null);
-                    SDL_GpuPushDebugGroup(CommandBuffer, "Reveal Pass"u8);
-                    {
-                        SDL_GpuBindGraphicsPipeline(RevealPass, RevealPipeline);
-                        SDL_GpuSetViewport(RevealPass, &Viewport);
-                        SDL_GpuSetScissor(RevealPass, &ScissorRect);
-
-                        Span<SDL_GpuTextureSlice> TextureBindings = stackalloc SDL_GpuTextureSlice[1];
-                        {
-                            TextureBindings[0].texture = ColorTexture;
-                            TextureBindings[0].mipLevel = 0;
-                            TextureBindings[0].layer = 0;
-                        }
-
-                        fixed (SDL_GpuTextureSlice* TextureBindingsPtr = TextureBindings)
-                        {
-                            SDL_GpuBindFragmentStorageTextures(RevealPass, 0, TextureBindingsPtr, 1);
-                        }
-                        SDL_GpuDrawPrimitives(RevealPass, 0, 3);
-                    }
-                    SDL_GpuPopDebugGroup(CommandBuffer);
-                    SDL_GpuEndRenderPass(RevealPass);
-                }
-
-                if (Overlay != null)
-                {
-                    SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
-                    {
-                        ColorAttachmentInfo.textureSlice.texture = SwapchainTexture;
-                        ColorAttachmentInfo.clearColor.r = 0.0f;
-                        ColorAttachmentInfo.clearColor.g = 0.0f;
-                        ColorAttachmentInfo.clearColor.b = 0.0f;
-                        ColorAttachmentInfo.clearColor.a = 1.0f;
-
-                        ColorAttachmentInfo.loadOp = SDL.SDL_GpuLoadOp.SDL_GPU_LOADOP_LOAD;
-                        ColorAttachmentInfo.storeOp = SDL.SDL_GpuStoreOp.SDL_GPU_STOREOP_STORE;
-                        ColorAttachmentInfo.cycle = 0;
-                    }
-
-                    IntPtr OverlayPass = SDL_GpuBeginRenderPass(CommandBuffer, &ColorAttachmentInfo, 1, null);
-                    SDL_GpuPushDebugGroup(CommandBuffer, "Overlay Pass"u8);
-                    {
-                        SDL_GpuBindGraphicsPipeline(OverlayPass, OverlayPipeline);
-                        SDL_GpuSetViewport(OverlayPass, &Viewport);
-                        SDL_GpuSetScissor(OverlayPass, &ScissorRect);
-
-                        Overlay.Draw(OverlayPass);
-                    }
-                    SDL_GpuPopDebugGroup(CommandBuffer);
-                    SDL_GpuEndRenderPass(OverlayPass);
-                }
+                SDL_GpuPopDebugGroup(CommandBuffer);
+                SDL_GpuEndRenderPass(OverlayPass);
             }
         }
+
         SDL_GpuSubmit(CommandBuffer);
         return false;
     }
