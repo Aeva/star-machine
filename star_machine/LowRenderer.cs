@@ -1,5 +1,6 @@
 
 using System.Text;
+using System.Threading;
 using System.Reflection;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -887,24 +888,17 @@ class LowLevelRenderer
         UploadFixies(SplatWorldPositionBuffer_L, SplatWorldPositionBuffer_H, HighRenderer.PositionUpload, true);
         UploadVector3s(SplatColorBuffer, HighRenderer.ColorUpload, true);
 
-        IntPtr CommandBuffer = IntPtr.Zero;
-        IntPtr SwapchainTexture = IntPtr.Zero;
-        UInt32 Width = 0;
-        UInt32 Height = 0;
+        IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
+        if (CommandBuffer == IntPtr.Zero)
+        {
+            Console.WriteLine("GpuAcquireCommandBuffer failed.");
+            return true;
+        }
+
+        (IntPtr SwapchainTexture, UInt32 Width, UInt32 Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
         while (SwapchainTexture == IntPtr.Zero)
         {
-            if (CommandBuffer != IntPtr.Zero)
-            {
-                SDL_GpuSubmit(CommandBuffer);
-            }
-
-            CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
-            if (CommandBuffer == IntPtr.Zero)
-            {
-                Console.WriteLine("GpuAcquireCommandBuffer failed.");
-                return true;
-            }
-
+            Thread.Yield();
             (SwapchainTexture, Width, Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
         }
 
