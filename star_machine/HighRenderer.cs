@@ -44,7 +44,6 @@ class HighLevelRenderer
     public double Efficiency = 0.0;
     public double UpdateProcessingMs = 0.0;
     public double ConvergenceTimeMs = 0.0;
-    public string? Analysis = null;
 
     // These are ring buffers for splat rendering.
     public Fixie[] PositionUpload = Array.Empty<Fixie>();
@@ -53,7 +52,7 @@ class HighLevelRenderer
     public uint WriteCursor = 0;
     public float SplatDiameter = 0.1f;
 
-    private PerfCounter FrameRate = new PerfCounter();
+    public PerfCounter FrameRate = new PerfCounter();
     private PerfCounter SplatCopyCount = new PerfCounter();
     private PerfCounter SplatCopyTime = new PerfCounter();
     private long LastPerfLog = 0;
@@ -176,8 +175,6 @@ class HighLevelRenderer
 
     public void Advance(FrameInfo Frame, PerformerStatus PlayerState, CharacterController Game)
     {
-        FrameRate.LogFrame();
-
         if (!PlayerState.Paused)
         {
             var FindLightPosition = (double Speed, double Phase) =>
@@ -241,7 +238,6 @@ class HighLevelRenderer
         {
             if (LastPerfLog > 0)
             {
-
                 CadenceMs = FrameRate.Average();
                 CadenceHz = 1.0 / CadenceMs * 1000.0;
 
@@ -250,19 +246,6 @@ class HighLevelRenderer
                 Efficiency = (UpdatesPerFrame / Settings.MaxSurfels) * 100.0;
 
                 ConvergenceTimeMs = ((Settings.MaxSurfels / UpdatesPerFrame) - 1) * CadenceMs;
-
-                if (Efficiency == 100.0)
-                {
-                    Analysis = null;
-                }
-                else if (UpdateProcessingMs < 4.0)
-                {
-                    Analysis = "Convergence time is bottlenecked on shading throughput.";
-                }
-                else if (UpdateProcessingMs >= 4.0)
-                {
-                    Analysis = "Convergence time is bottlenecked on Synchronization.";
-                }
             }
             LastPerfLog = DateTime.UtcNow.Ticks;
         }

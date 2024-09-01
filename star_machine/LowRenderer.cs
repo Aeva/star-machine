@@ -902,6 +902,8 @@ class LowLevelRenderer
             (SwapchainTexture, Width, Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
         }
 
+        HighRenderer.FrameRate.LogFrame();
+
         if (Overlay != null)
         {
             Overlay.Advance(Frame);
