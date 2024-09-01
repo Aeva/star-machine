@@ -94,6 +94,9 @@ class LowLevelRenderer
     private IntPtr SplatWorldPositionBuffer_H = IntPtr.Zero;
     private IntPtr SplatColorBuffer = IntPtr.Zero;
 
+    private UInt32 CurrentWidth = 0;
+    private UInt32 CurrentHeight = 0;
+
     public RootWidget? Overlay = null;
 
     private SplatGenerator SplatMesh;
@@ -339,6 +342,8 @@ class LowLevelRenderer
                     return true;
                 }
                 (BackBuffer, Width, Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
+                CurrentWidth = Width;
+                CurrentHeight = Height;
                 SDL_GpuSubmit(CommandBuffer);
             }
 
@@ -895,14 +900,8 @@ class LowLevelRenderer
             return true;
         }
 
-        (IntPtr SwapchainTexture, UInt32 Width, UInt32 Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
-        while (SwapchainTexture == IntPtr.Zero)
-        {
-            Thread.Yield();
-            (SwapchainTexture, Width, Height) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
-        }
-
-        HighRenderer.FrameRate.LogFrame();
+        UInt32 Width = CurrentWidth;
+        UInt32 Height = CurrentHeight;
 
         if (Overlay != null)
         {
@@ -1026,6 +1025,15 @@ class LowLevelRenderer
                 SDL_GpuPopDebugGroup(CommandBuffer);
                 SDL_GpuEndRenderPass(SurfelPass);
             }
+
+            (IntPtr SwapchainTexture, CurrentWidth, CurrentHeight) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
+            while (SwapchainTexture == IntPtr.Zero)
+            {
+                Thread.Yield();
+                (SwapchainTexture, CurrentWidth, CurrentHeight) = SDL_GpuAcquireSwapchainTexture(CommandBuffer, Window);
+            }
+
+            HighRenderer.FrameRate.LogFrame();
 
             {
                 SDL_GpuColorAttachmentInfo ColorAttachmentInfo;
