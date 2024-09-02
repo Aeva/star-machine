@@ -23,6 +23,8 @@ uniform ViewInfoBlock
     float SplatDiameter;
     float SplatDepth;
     float AspectRatio;
+
+    float PupilOffset;
 };
 
 layout (location = 0) in vec3 LocalVertexOffset;
@@ -41,6 +43,7 @@ void main()
 
     vec4 ViewPosition = WorldToView * vec4(SplatViewPosition, 1.0f);
     ViewPosition /= ViewPosition.w;
+    ViewPosition.x += PupilOffset;
     ViewPosition.z += LocalVertexOffset.z * SplatDepth;
 
     float WarpTail = min(MovementProjection.w, 1000.0f);

@@ -7,3 +7,4 @@ third_party\glslang\glslangValidator.exe --enhanced-msgs --nan-clamp -g -V -e ma
 
 third_party\glslang\glslangValidator.exe --enhanced-msgs --nan-clamp -g -V -e main -S vert -o Reveal.vs.spirv star_machine\Reveal.vs.glsl
 third_party\glslang\glslangValidator.exe --enhanced-msgs --nan-clamp -g -V -e main -S frag -o Reveal.fs.spirv star_machine\Reveal.fs.glsl
+third_party\glslang\glslangValidator.exe --enhanced-msgs --nan-clamp -g -V -e main -S frag -o Stereo.fs.spirv star_machine\Stereo.fs.glsl

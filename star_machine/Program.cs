@@ -38,6 +38,13 @@ public class RenderingConfig
     // Field of view, degrees.
     public double FieldOfView = 60;
 
+    // Pupilary distance.  Set to 0 to disable stereo rendering.
+#if true
+    public float PupilaryDistance = 0.0f;
+#else
+    public float PupilaryDistance = 62.0f * 0.001f * 4.0f; // 62 mm
+#endif
+
     // View space near plane distance.
     public double NearPlane = 0.001;
 
