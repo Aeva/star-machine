@@ -36,7 +36,7 @@ class CharacterController
     private float TurnSpeed = 30.0f;
 
     // Warp demo is active
-    public bool WarpMode = true;
+    public bool WarpMode = false;
 
     public CharacterController(HighLevelRenderer InHighRenderer, LowLevelRenderer InLowRenderer)
     {

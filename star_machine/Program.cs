@@ -1,5 +1,6 @@
 ﻿
 using System.Reflection;
+using System.Text.RegularExpressions;
 using static System.Buffer;
 
 using SDL3;
@@ -231,36 +232,53 @@ internal class Program
             {
                 Settings.PresentMode = SDL_GpuPresentMode.SDL_GPU_PRESENTMODE_VSYNC;
             }
-            if (Arg == "--immediate" || Arg == "--novsync")
+            else if (Arg == "--immediate" || Arg == "--novsync")
             {
                 Settings.PresentMode = SDL_GpuPresentMode.SDL_GPU_PRESENTMODE_IMMEDIATE;
             }
-            if (Arg == "--mailbox")
+            else if (Arg == "--mailbox")
             {
                 Settings.PresentMode = SDL_GpuPresentMode.SDL_GPU_PRESENTMODE_MAILBOX;
             }
-            if (Arg == "--fullscreen")
+            else if (Arg == "--fullscreen")
             {
                 Settings.Fullscreen = true;
             }
-            if (Arg == "--windowed")
+            else if (Arg == "--windowed")
             {
                 Settings.Fullscreen = false;
+            }
+            else if (Arg == "--resources")
+            {
+                Console.WriteLine("Embedded resources:");
+                string[] ResourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
+                foreach (string ResourceName in ResourceNames)
+                {
+                    Console.WriteLine($" - {ResourceName}");
+                }
+            }
+            else if (Arg.StartsWith("--pd"))
+            {
+                Regex PupilaryDistanceRegex = new Regex(@"^--pd=(\d+(?:\.\d+)?)");
+                Match Found = PupilaryDistanceRegex.Match(Arg);
+                if (Found.Success)
+                {
+                    string MatchSubstring = Found.Groups[1].ToString();
+                    float PupilaryDistance = Single.Max(Single.Parse(MatchSubstring), 0.0f);
+                    Console.WriteLine($"Pupilary distance: {PupilaryDistance} mm");
+                    Settings.PupilaryDistance = PupilaryDistance * 0.001f * 4.0f;
+                }
+                else
+                {
+                    Console.WriteLine($"Invalid pupilary distance request: {Arg}");
+                    return;
+                }
             }
         }
 
 #if true
         {
             FixedPointTests.PreflightCheck();
-        }
-#endif
-
-#if true
-        Console.WriteLine("Embedded resources:");
-        string[] ResourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
-        foreach (string ResourceName in ResourceNames)
-        {
-            Console.WriteLine($" - {ResourceName}");
         }
 #endif
 
