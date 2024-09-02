@@ -279,6 +279,7 @@ internal class Program
 #if true
         {
             FixedPointTests.PreflightCheck();
+            UnitsTests.PreflightCheck();
         }
 #endif
 
