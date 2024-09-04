@@ -46,6 +46,8 @@ class CharacterController
 
     public void Advance(FrameInfo Frame, PerformerStatus PlayerState)
     {
+        float ElapsedSeconds = (float)(Frame.ElapsedMs * UnitConversions.MillisecondsToSeconds);
+
         if (PlayerState.Reset)
         {
             CurrentHeading = 0.0f;
@@ -64,7 +66,7 @@ class CharacterController
         if (PlayerState.Align)
         {
             float TargetHeading = Single.Round(CurrentHeading / 90.0f) * 90.0f;
-            CurrentHeading = Single.Lerp(CurrentHeading, TargetHeading, 1.0f * (float)(Frame.ElapsedMs / 1000.0));
+            CurrentHeading = Single.Lerp(CurrentHeading, TargetHeading, Single.Min(ElapsedSeconds, 1.0f));
             bool Snap = Single.Abs(TargetHeading - CurrentHeading) <= 0.5f;
 
             float Radians = (float)(Math.PI / 180.0) * CurrentHeading;
@@ -203,7 +205,6 @@ class CharacterController
             if (Magnitude > 0.01f)
             {
                 HighRenderer.Tunneling += 1.0f * Seconds;
-                float ElapsedSeconds = (float)(Frame.ElapsedMs / 1000.0);
                 HighRenderer.MovementProjection = new Fixie(LinearVelocity * ElapsedSeconds);
             }
             else

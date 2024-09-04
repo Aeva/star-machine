@@ -100,6 +100,9 @@ static class UnitConversions
     public const double DaysToNanoseconds = Time.Day / Time.Nanosecond;
     public const double NanosecondsToDays = Time.Nanosecond / Time.Day;
 
+    public const double SecondsToMilliseconds = Time.Second / Time.Millisecond;
+    public const double MillisecondsToSeconds = Time.Millisecond / Time.Second;
+
     public const double DaysToSeconds = Time.Day / Time.Second;
     public const double SecondsToDays = Time.Second / Time.Day;
 
