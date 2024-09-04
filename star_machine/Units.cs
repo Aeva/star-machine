@@ -10,6 +10,8 @@ namespace StarMachine;
 // Common SI prefixes.
 static class Prefix
 {
+    // These are written as double precision floats because fixed point 48.16
+    // and 64.64 can't express the most of the fractional prefixes exactly.
     public const double Pico  = 0.000000000001;
     public const double Nano  = 0.000000001;
     public const double Micro = 0.000001;
@@ -32,7 +34,7 @@ static class Time
     public const double Second = 1.0;
 
     // SI second submultiples
-    public const double PicoSecond  = Prefix.Pico;
+    public const double Picosecond  = Prefix.Pico;
     public const double Nanosecond  = Prefix.Nano;
     public const double Microsecond = Prefix.Micro;
     public const double Millisecond = Prefix.Milli;
@@ -79,32 +81,61 @@ static class Space
     // Astronomical distances
     public const double LunarDistance = 384_399_000.0;
     public const double AstronomicalUnit = 149_597_870_700.0;
-    public const double LightYear = 9_460_730_472_580_800;
+    public const double LightSecond = 299_792_458.0;
+    public const double LightHour = 1_079_252_848_800.0;
+    public const double LightYear = 9_460_730_472_580_800.0;
 
     // Fictional units
-    public const double WorldScale = 4.0;
+    public const double WorldUnit = 0.25;
 }
 
-static class Units
+
+static class UnitConversions
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static double Convert(double Quantity, double From, double To)
-    {
-        // Equivalent to `Quantity * (From / To)`, but better precision?
-        return Quantity / (To / From);
-    }
+    // Always list the ratio with the larger magnitude first.
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static FixedInt Convert(FixedInt Quantity, double From, double To)
-    {
-        return (FixedInt)Convert((double)Quantity, From, To);
-    }
+    public const double DaysToPicoseconds = Time.Day / Time.Picosecond;
+    public const double PicosecondsToDays = Time.Picosecond / Time.Day;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static long Convert(long Quantity, double From, double To)
-    {
-        return (long)Convert((double)Quantity, From, To);
-    }
+    public const double DaysToNanoseconds = Time.Day / Time.Nanosecond;
+    public const double NanosecondsToDays = Time.Nanosecond / Time.Day;
+
+    public const double DaysToSeconds = Time.Day / Time.Second;
+    public const double SecondsToDays = Time.Second / Time.Day;
+
+    public const double HoursToSeconds = Time.Hour / Time.Second;
+    public const double SecondsToHours = Time.Second / Time.Hour;
+
+    public const double MilesToMeters = Space.Mile / Space.Meter;
+    public const double MetersToMiles = Space.Meter / Space.Mile;
+
+    public const double MilesToKilometers = Space.Mile / Space.Kilometer;
+    public const double KilometersToMiles = Space.Kilometer / Space.Mile;
+
+    public const double MetersToWorldUnits = Space.Meter / Space.WorldUnit;
+    public const double WorldUnitsToMeters = Space.WorldUnit / Space.Meter;
+
+    public const double MilesToWorldUnits = Space.Mile / Space.WorldUnit;
+    public const double WorldUnitsToMiles = Space.WorldUnit / Space.Mile;
+
+    public const double LightSecondsToWorldUnits = Space.LightSecond / Space.WorldUnit;
+    public const double WorldUnitsToLightSeconds = Space.WorldUnit / Space.LightSecond;
+
+    // The velocity conversion constants are generally lossy and should only be used for display.
+
+    public const double MetersPerSecondToMilesPerHour = Time.Hour / Space.Mile;
+    public const double MilesPerHourToMetersPerSecond = Space.Mile / Time.Hour;
+
+    public const double MilesPerHourToKilometersPerHour = MilesToKilometers;
+    public const double KilometersPerHourToMilesPerHour = KilometersToMiles;
+
+    public const double WorldUnitsPerSecondToMilesPerHour = (Space.WorldUnit / Space.Mile) / (Time.Second / Time.Hour);
+    public const double MilesPerHourToWorldUnitsPerSecond = (Space.Mile / Space.WorldUnit) / (Time.Hour / Time.Second);
+
+    public const double MilesPerSecondToWorldUnitsPerSecond = MilesToWorldUnits;
+    public const double WorldUnitsPerSecondToMilesPerSecond = WorldUnitsToMeters;
+
+    public const double WorldUnitPerSecondToSpeedOfLight = WorldUnitsToLightSeconds;
 }
 
 
@@ -129,94 +160,46 @@ static class UnitsTests
         TestUnit(Prefix.Giga,  1e+9);
         TestUnit(Prefix.Tera,  1e+12);
 
+        var TestSymmetry = (double From, double To) =>
         {
-            FixedInt Got = Units.Convert((FixedInt)1, Space.AstronomicalUnit, Space.Meter);
-            FixedInt Expected = (FixedInt)149597870700;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
+            double Forward = From / To;
+            double Backward = To / From;
+            double Result = Forward * Backward;
+            Trace.Assert(Result == 1.0, $"({From} / {To}) * ({To} / {From}) != 1.0");
+        };
+        TestSymmetry(Time.Day, Time.Picosecond);
+
         {
-            FixedInt Got = Units.Convert((FixedInt)1, Space.League, Space.Mile);
-            FixedInt Expected = (FixedInt)3;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Space.Mile, Space.Inch);
-            FixedInt Expected = (FixedInt)63360;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Space.Yard, Space.Inch);
-            FixedInt Expected = (FixedInt)36;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Space.Foot, Space.Inch);
-            FixedInt Expected = (FixedInt)12;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Space.Inch, Space.Millimeter);
-            FixedInt Expected = (FixedInt)25.4;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Space.Inch, Space.Pica);
-            FixedInt Expected = (FixedInt)6;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Space.Inch, Space.Point);
-            FixedInt Expected = (FixedInt)72;
+            // Note: FixedInt is not wide enough to express a day's worth of picoseconds.
+            long Picoseconds = 86400000000000000L;
+            long Got = Picoseconds / (long)UnitConversions.DaysToPicoseconds;
+            long Expected = 1L;
             Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
         }
 
+        {
+            FixedInt Nanoseconds = (FixedInt)86400000000000L;
+            FixedInt Got = Nanoseconds / (FixedInt)UnitConversions.DaysToNanoseconds;
+            FixedInt Expected = (FixedInt)1L;
+            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
+        }
 
         {
-            FixedInt Got = Units.Convert((FixedInt)1, Time.Tick, Time.Nanosecond);
-            FixedInt Expected = (FixedInt)TimeSpan.NanosecondsPerTick;
+            FixedInt Seconds = (FixedInt)(60 * 60 * 24);
+            FixedInt Got = Seconds / (FixedInt)UnitConversions.DaysToSeconds;
+            FixedInt Expected = (FixedInt)1L;
             Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
         }
+
         {
-            FixedInt Got = Units.Convert((FixedInt)1, Time.Microsecond, Time.Tick);
-            FixedInt Expected = (FixedInt)TimeSpan.TicksPerMicrosecond;
+            FixedInt WorldUnits = (FixedInt)4;
+            FixedInt Got = WorldUnits / (FixedInt)UnitConversions.MetersToWorldUnits;
+            FixedInt Expected = (FixedInt)1L;
             Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
         }
+
         {
-            FixedInt Got = Units.Convert((FixedInt)1, Time.Millisecond, Time.Tick);
-            FixedInt Expected = (FixedInt)TimeSpan.TicksPerMillisecond;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
+            Trace.Assert(UnitConversions.MilesPerHourToMetersPerSecond == 0.44704);
         }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Time.Second, Time.Tick);
-            FixedInt Expected = (FixedInt)TimeSpan.TicksPerSecond;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Time.Minute, Time.Tick);
-            FixedInt Expected = (FixedInt)TimeSpan.TicksPerMinute;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Time.Hour, Time.Tick);
-            FixedInt Expected = (FixedInt)TimeSpan.TicksPerHour;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Time.Day, Time.Tick);
-            FixedInt Expected = (FixedInt)TimeSpan.TicksPerDay;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Time.Hour, Time.Nanosecond);
-            FixedInt Expected = (FixedInt)3_600_000_000_000;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}");
-        }
-#if false
-        {
-            FixedInt Got = Units.Convert((FixedInt)1, Time.Day, Time.Nanosecond);
-            FixedInt Expected = (FixedInt)8.64e+13;
-            Trace.Assert(Got == Expected, $"Expected {Expected}, got {Got}"); // fails on 86_399_999_999_999.984375
-        }
-#endif
     }
 }

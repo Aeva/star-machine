@@ -20,17 +20,17 @@ class CharacterController
     public double MilesPerHour = 0.0; // Current display speed
     public double SpeedOfLight = 0.0; // Current display speed
 
-    // Units per second
-    private float Acceleration = 15.0f;
-    private float TopSpeed = 4.0f * 1609.34f * 600.0f;
+    // World units per second per second
+    private const float Acceleration = 15.0f;
+    private const float TopSpeed = (float)(600.0 * UnitConversions.MilesPerSecondToWorldUnitsPerSecond);
 
     private Vector3 LinearVelocity = Vector3.Zero;
 
     // Interpolated starting velocity, which peaks at 150 mph (assuming the cube things are a meter wide).
-    private Vector3 FastVelocity = new Vector3(0.0f, 4.0f * 0.44704f * 150.0f, 0.0f);
+    private Vector3 FastVelocity = new Vector3(0.0f, (float)(150.0 * UnitConversions.MilesPerHourToWorldUnitsPerSecond), 0.0f);
 
     // Interpolated starting velocity, which peaks at 600 miles per second (assuming the cube things are a meter wide).
-    private Vector3 WarpVelocity = new Vector3(0.0f, 4.0f * 1609.344f * 600.0f, 0.0f);
+    private Vector3 WarpVelocity = new Vector3(0.0f, (float)(600.0 * UnitConversions.MilesPerSecondToWorldUnitsPerSecond), 0.0f);
 
     // Degrees per second
     private float TurnSpeed = 30.0f;
@@ -222,11 +222,9 @@ class CharacterController
             HighRenderer.GrainAlpha = HighRenderer.Tunneling * 0.4f;
             HighRenderer.GrainAlpha *= HighRenderer.GrainAlpha;
 
-            const double ToMilesPerHour = 1.0 / (1609.344 / 3600.0);
-            const double ToSpeedOfLight = 1.0 / (299792458.0);
-            double MetersPerSecond = LinearVelocity.Length() * 0.25;
-            MilesPerHour = MetersPerSecond * ToMilesPerHour;
-            SpeedOfLight = Math.Round(MetersPerSecond * ToSpeedOfLight, 4);
+            double WorldUnitsPerSecond = LinearVelocity.Length();
+            MilesPerHour = WorldUnitsPerSecond * UnitConversions.WorldUnitsPerSecondToMilesPerHour;
+            SpeedOfLight = Math.Round(WorldUnitsPerSecond * UnitConversions.WorldUnitPerSecondToSpeedOfLight, 4);
         }
     }
 }

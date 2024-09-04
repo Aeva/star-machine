@@ -269,6 +269,56 @@ public record struct FixedInt
     }
 
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static FixedInt operator +(FixedInt LHS, double RHS)
+    {
+        return LHS + (FixedInt)RHS;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static FixedInt operator -(FixedInt LHS, double RHS)
+    {
+        return LHS - (FixedInt)RHS;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static FixedInt operator *(FixedInt LHS, double RHS)
+    {
+        return LHS * (FixedInt)RHS;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static FixedInt operator /(FixedInt LHS, double RHS)
+    {
+        return LHS / (FixedInt)RHS;
+    }
+
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static FixedInt operator +(double LHS, FixedInt RHS)
+    {
+        return (FixedInt)LHS + RHS;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static FixedInt operator -(double LHS, FixedInt RHS)
+    {
+        return (FixedInt)LHS - RHS;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static FixedInt operator *(double LHS, FixedInt RHS)
+    {
+        return (FixedInt)LHS * RHS;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static FixedInt operator /(double LHS, FixedInt RHS)
+    {
+        return (FixedInt)LHS / RHS;
+    }
+
+
     public static bool operator<(FixedInt LHS, FixedInt RHS)
     {
         return LHS.Value < RHS.Value;
