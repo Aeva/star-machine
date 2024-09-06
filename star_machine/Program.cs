@@ -174,29 +174,11 @@ internal class Program
 
     static void LoadIcon(IntPtr Window)
     {
-        const string ResourceName = "StarMachine.star_machine.bmp";
-        using (Stream? ResourceStream = Assembly.GetExecutingAssembly().GetManifestResourceStream(ResourceName))
+        var Icon = ImageResource.LoadBMP("StarMachine.star_machine.bmp");
+        if (SDL_SetWindowIcon(Window, Icon.Surface) < 0)
         {
-            if (ResourceStream != null)
-            {
-                byte[] ResourceData = new byte[ResourceStream.Length];
-                ResourceStream.Read(ResourceData, 0, (int)ResourceStream.Length);
-
-                unsafe
-                {
-                    fixed(byte* ResourceDataPtr = ResourceData)
-                    {
-                        IntPtr MemoryStream = SDL_IOFromMem(ResourceDataPtr, ResourceData.Length);
-                        IntPtr IconSurface = SDL_LoadBMP_IO(MemoryStream, 1);
-                        if (SDL_SetWindowIcon(Window, IconSurface) < 0)
-                        {
-                            // Seems SDL3 can't set the window icon this way on wayland???
-                            //Console.WriteLine(SDL_GetError());
-                        }
-                        SDL_DestroySurface(IconSurface);
-                    }
-                }
-            }
+            // Seems SDL3 can't set the window icon this way on wayland???
+            //Console.WriteLine(SDL_GetError());
         }
     }
 
@@ -226,8 +208,10 @@ internal class Program
 
     static void Main(string[] Args)
     {
-        foreach (string Arg in Args)
+        for (int ArgIndex = 0; ArgIndex < Args.Length; ++ArgIndex)
         {
+            string Arg = Args[ArgIndex];
+            int Remaining = (Args.Length - 1) - ArgIndex;
             if (Arg == "--vsync")
             {
                 Settings.PresentMode = SDL_GpuPresentMode.SDL_GPU_PRESENTMODE_VSYNC;
@@ -253,26 +237,36 @@ internal class Program
                 Console.WriteLine("Embedded resources:");
                 string[] ResourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
                 foreach (string ResourceName in ResourceNames)
-                {
+        {
                     Console.WriteLine($" - {ResourceName}");
                 }
+                return;
             }
-            else if (Arg.StartsWith("--pd"))
+            else if (Arg == "--print" && Remaining > 0)
             {
-                Regex PupilaryDistanceRegex = new Regex(@"^--pd=(\d+(?:\.\d+)?)");
-                Match Found = PupilaryDistanceRegex.Match(Arg);
-                if (Found.Success)
+                string QueryName = Args[++ArgIndex];
+                string[] ResourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
+                foreach (string ResourceName in ResourceNames)
                 {
-                    string MatchSubstring = Found.Groups[1].ToString();
-                    float PupilaryDistance = Single.Max(Single.Parse(MatchSubstring), 0.0f);
-                    Console.WriteLine($"Pupilary distance: {PupilaryDistance} mm");
-                    Settings.PupilaryDistance = PupilaryDistance * 0.001f * 4.0f;
+                    if (QueryName == ResourceName)
+                    {
+                        Console.WriteLine(ResourceName);
+                        if (ResourceName.EndsWith(".bmp"))
+                        {
+                            var Image = ImageResource.LoadBMP(ResourceName);
+                            Image.Print(false);
+                        }
+                        return;
+                    }
                 }
-                else
-                {
-                    Console.WriteLine($"Invalid pupilary distance request: {Arg}");
-                    return;
-                }
+                Console.WriteLine($"No resource named {QueryName}");
+                return;
+            }
+            else if (Arg == "--pd" && Remaining > 0)
+            {
+                float PupilaryDistance = Single.Max(Single.Parse(Args[++ArgIndex]), 0.0f);
+                Console.WriteLine($"Pupilary distance: {PupilaryDistance} mm");
+                Settings.PupilaryDistance = PupilaryDistance * 0.001f * 4.0f;
             }
         }
 

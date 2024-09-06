@@ -5,6 +5,7 @@
 //  - https://github.com/thatcosmonaut/SDL/tree/gpu/include/SDL3
 
 using System.Runtime.InteropServices;
+using Vector4 = System.Numerics.Vector4;
 
 using SDL_bool = int;
 using size_t = nint;
@@ -1281,6 +1282,73 @@ namespace SDL3
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern void SDL_DestroySurface(SDL_Surface_Ptr surface);
+
+
+        /**
+         * Get the clipping rectangle for a surface.
+         *
+         * When `surface` is the destination of a blit, only the area within the clip
+         * rectangle is drawn into.
+         *
+         * \param surface the SDL_Surface structure representing the surface to be
+         *                clipped.
+         * \param rect an SDL_Rect structure filled in with the clipping rectangle for
+         *             the surface.
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_SetSurfaceClipRect
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe int SDL_GetSurfaceClipRect(SDL_Surface_Ptr surface, SDL_Rect* rect);
+
+        /**
+         * Retrieves a single pixel from a surface.
+         *
+         * This function prioritizes correctness over speed: it is suitable for unit
+         * tests, but is not intended for use in a game engine.
+         *
+         * \param surface the surface to read.
+         * \param x the horizontal coordinate, 0 <= x < width.
+         * \param y the vertical coordinate, 0 <= y < height.
+         * \param r a pointer filled in with the red channel, normally in the range
+         *          0-1, or NULL to ignore this channel.
+         * \param g a pointer filled in with the green channel, normally in the range
+         *          0-1, or NULL to ignore this channel.
+         * \param b a pointer filled in with the blue channel, normally in the range
+         *          0-1, or NULL to ignore this channel.
+         * \param a a pointer filled in with the alpha channel, normally in the range
+         *          0-1, or NULL to ignore this channel.
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static unsafe extern int SDL_ReadSurfacePixelFloat(SDL_Surface_Ptr surface, int x, int y, float* r, float* g, float* b, float* a);
+
+        /**
+         * Writes a single pixel to a surface.
+         *
+         * This function prioritizes correctness over speed: it is suitable for unit
+         * tests, but is not intended for use in a game engine.
+         *
+         * \param surface the surface to write.
+         * \param x the horizontal coordinate, 0 <= x < width.
+         * \param y the vertical coordinate, 0 <= y < height.
+         * \param r the red channel value, normally in the range 0-1.
+         * \param g the green channel value, normally in the range 0-1.
+         * \param b the blue channel value, normally in the range 0-1.
+         * \param a the alpha channel value, normally in the range 0-1.
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        public static extern int SDL_WriteSurfacePixelFloat(SDL_Surface_Ptr surface, int x, int y, float r, float g, float b, float a);
 
         /**
          * Load a BMP image from a seekable SDL data stream.
