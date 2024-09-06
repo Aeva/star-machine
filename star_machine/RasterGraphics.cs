@@ -52,6 +52,29 @@ public class ImageResource
         return new ImageResource(Name, Surface);
     }
 
+    public static ImageResource CreateEmpty(string Name, int Width, int Height, Vector4 Fill)
+    {
+        byte R = (byte)Single.Min(Single.Max(Fill.X * 255.0f, 0.0f), 255.0f);
+        byte G = (byte)Single.Min(Single.Max(Fill.Y * 255.0f, 0.0f), 255.0f);
+        byte B = (byte)Single.Min(Single.Max(Fill.Z * 255.0f, 0.0f), 255.0f);
+        byte A = (byte)Single.Min(Single.Max(Fill.W * 255.0f, 0.0f), 255.0f);
+        int Bytes = Width * Height * 4;
+        byte[] Data = new byte[Bytes];
+        for (int Cursor = 0; Cursor < Bytes; Cursor += 4)
+        {
+            Data[Cursor + 0] = R;
+            Data[Cursor + 1] = G;
+            Data[Cursor + 2] = B;
+            Data[Cursor + 3] = A;
+        }
+        return CreateFromData(Name, Width, Height, Data, SDL.SDL_PixelFormat.SDL_PIXELFORMAT_BGRA8888);
+    }
+
+    public static ImageResource CreateEmpty(string Name, int Width, int Height)
+    {
+        return CreateEmpty(Name, Width, Height, Vector4.UnitW);
+    }
+
     public static ImageResource LoadBMP(string Name)
     {
         byte[] ResourceData = Resources.Read(Name);
@@ -105,16 +128,25 @@ public class ImageResource
         return Read((int)X, (int)Y);
     }
 
+    public void Write(int X, int Y, float R, float G, float B, float A)
+    {
+        SDL_WriteSurfacePixelFloat(Surface, X, Y, R, G, B, A);
+    }
+
+    public void Write(int X, int Y, Vector4 Color)
+    {
+        Write(X, Y, Color.X, Color.Y, Color.Z, Color.W);
+    }
+
     public Vector4 SampleLinear(Vector2 UV)
     {
-        Vector2 WH = new((float)Width, (float)Height);
+        Vector2 WH = new((float)Width - 1.0f, (float)Height - 1.0f);
         Vector2 XY = WH * UV;
         Vector2 FloorXY = new(Single.Floor(XY.X), Single.Floor(XY.Y));
-        Vector2 MaxXY = WH - Vector2.One;
 
-        Vector2 Low = Vector2.Min(Vector2.Max(FloorXY, Vector2.Zero), MaxXY);
-        Vector2 High = Vector2.Min(Vector2.Max(FloorXY + Vector2.One, Vector2.Zero), MaxXY);
-        Vector2 Alpha = Low - XY;
+        Vector2 Low = FloorXY;
+        Vector2 High = FloorXY + Vector2.One;
+        Vector2 Alpha = XY - Low;
 
         return Vector4.Lerp(
             Vector4.Lerp(Read(Low.X, Low.Y), Read(High.X, Low.Y), Alpha.X),
