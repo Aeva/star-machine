@@ -150,8 +150,8 @@ public class ImageResource
             for (float U = 0.0f; U <= 1.0f; U += StepU)
             {
                 float Gray = Thunk(SampleLinear(U, V));
-                //var Color = SampleLinear(U, V);
-                //float Gray = (Color.X + Color.Y + Color.Z) / 3.0f;
+                Gray = Single.Pow(Single.Min(Single.Max(Gray, 0.0f), 1.0f), 2.2f);
+
                 int ShadeIndex = (int)Single.Min(Single.Max(Gray * MaxGradientIndex, 0.0f), MaxGradientIndex);
                 Row += TextGradient[CheckerX][ShadeIndex];
 
@@ -180,5 +180,41 @@ public class ImageResource
             };
             Print(Thunk);
         }
+    }
+
+    public void PrintRed()
+    {
+        DesaturateMixin Thunk = (Vector4 Color) =>
+        {
+            return Color.X;
+        };
+        Print(Thunk);
+    }
+
+    public void PrintGreen()
+    {
+        DesaturateMixin Thunk = (Vector4 Color) =>
+        {
+            return Color.Y;
+        };
+        Print(Thunk);
+    }
+
+    public void PrintBlue()
+    {
+        DesaturateMixin Thunk = (Vector4 Color) =>
+        {
+            return Color.Z;
+        };
+        Print(Thunk);
+    }
+
+    public void PrintAlpha()
+    {
+        DesaturateMixin Thunk = (Vector4 Color) =>
+        {
+            return Color.W;
+        };
+        Print(Thunk);
     }
 }
