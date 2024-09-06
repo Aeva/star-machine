@@ -37,6 +37,21 @@ public class ImageResource
         Height = ClipRect.h;
     }
 
+    public static ImageResource CreateFromData(
+        string Name, int Width, int Height, byte[] Data, SDL.SDL_PixelFormat PixelFormat)
+    {
+        IntPtr Surface = IntPtr.Zero;
+        unsafe
+        {
+            int Stride = Data.Length / Height;
+            fixed (void* Pixels = Data)
+            {
+                Surface = SDL_CreateSurfaceFrom(Width, Height, PixelFormat, Pixels, Stride);
+            }
+        }
+        return new ImageResource(Name, Surface);
+    }
+
     public static ImageResource LoadBMP(string Name)
     {
         byte[] ResourceData = Resources.Read(Name);

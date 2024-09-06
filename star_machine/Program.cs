@@ -256,6 +256,24 @@ internal class Program
                             var Image = ImageResource.LoadBMP(ResourceName);
                             Image.Print(false);
                         }
+                        else if (ResourceName.EndsWith(".svg"))
+                        {
+                            // PlutoSVG calls crash if PlutoVG was not invoked first.
+                            PlutoVG.PlutoVG.plutovg_version_string();
+                            var SVG = new SVGResource(ResourceName);
+                            (int W, int H, byte[] Data) = SVG.Render(100, -1);
+                            var Format = SDL.SDL_PixelFormat.SDL_PIXELFORMAT_BGRA8888;
+                            var Image = ImageResource.CreateFromData(ResourceName, W, H, Data, Format);
+                            Image.Print(true);
+                        }
+                        else if (ResourceName.EndsWith(".ttf"))
+                        {
+                            var Font = new FontResource(ResourceName);
+                            (int W, int H, byte[] Data) = Font.Render("mph", 64);
+                            var Format = SDL.SDL_PixelFormat.SDL_PIXELFORMAT_BGRA8888;
+                            var Image = ImageResource.CreateFromData(ResourceName, W, H, Data, Format);
+                            Image.Print(true);
+                        }
                         return;
                     }
                 }

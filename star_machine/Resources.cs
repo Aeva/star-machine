@@ -18,12 +18,19 @@ public class Resources
         string[] ResourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
         foreach (string ResourceName in ResourceNames)
         {
-            MatchCollection Match = Pattern.Matches(ResourceName);
-            if (Match.Count == 1)
+            if (ResourceName == Partial)
             {
-                Trace.Assert(MatchCount == 0, $"\"{Partial}\" matches multiple embedded resources!");
-                ++MatchCount;
-                MatchedName = ResourceName;
+                return ResourceName;
+            }
+            else
+            {
+                MatchCollection Match = Pattern.Matches(ResourceName);
+                if (Match.Count == 1)
+                {
+                    Trace.Assert(MatchCount == 0, $"\"{Partial}\" matches multiple embedded resources!");
+                    ++MatchCount;
+                    MatchedName = ResourceName;
+                }
             }
         }
         Trace.Assert(MatchCount == 1, $"\"{Partial}\" matches no embedded resources!");
