@@ -135,7 +135,7 @@ public class ImageResource
     {
         const float TextAspect = 32.0f / 14.0f;
         const float StepU = 1.0f / 100.0f;
-        const float StepV = StepU * TextAspect;
+        float StepV = (StepU * TextAspect) * ((float)Width / (float)Height);
 
         string[] TextGradient = {"▁▂▃▄▅▆▇█", "▏▎▍▌▋▊▉█"};
 
