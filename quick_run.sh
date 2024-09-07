@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
 set -e
-./bin/Release/net8.0/linux-x64/publish/StarMachine $@
+dotnet build
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:bin/Release/net8.0/linux-x64/publish/ dotnet run
