@@ -245,17 +245,20 @@ internal class Program
             else if (Arg == "--test-pattern")
             {
                 int Span = 8;
-                float Tail = Single.Sqrt(2.0f) * (float)Span;
+                float Tail = Single.Sqrt(2.0f) * (float)(Span - 1);
                 var Image = ImageResource.CreateEmpty("Test Pattern", Span, Span);
                 for (int Y = 0; Y < Image.Height; ++Y)
                 {
                     for (int X = 0; X < Image.Width; ++X)
                     {
-                        float N = 1.0f - Single.Min(Single.Max(Single.Abs((float)X - (float)Y) / Tail, 0.0f), 1.0f);
-                        Image.Write(X, Y, N, 0.0f, 0.0f, 1.0f);
+                        float R = 1.0f - Single.Min(Single.Max(Single.Abs((float)X - (float)Y) / Tail, 0.0f), 1.0f);
+                        float G = (float)X / (float)(Image.Width - 1);
+                        float B = (float)Y / (float)(Image.Width - 1);
+                        Image.Write(X, Y, R, G, B, 1.0f);
                     }
                 }
                 Image.PrintRed();
+                Image.SaveBMP("test_pattern.bmp");
                 return;
             }
             else if (Arg == "--print" && Remaining > 0)

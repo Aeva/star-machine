@@ -1370,6 +1370,39 @@ namespace SDL3
          */
         [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
         public static extern SDL_Surface_Ptr SDL_LoadBMP_IO(SDL_IOStream_Ptr stream, SDL_bool closeio);
+
+        /**
+         * Save a surface to a file.
+         *
+         * Surfaces with a 24-bit, 32-bit and paletted 8-bit format get saved in the
+         * BMP directly. Other RGB formats with 8-bit or higher get converted to a
+         * 24-bit surface or, if they have an alpha mask or a colorkey, to a 32-bit
+         * surface before they are saved. YUV and paletted 1-bit and 4-bit formats are
+         * not supported.
+         *
+         * \param surface the SDL_Surface structure containing the image to be saved.
+         * \param file a file to save to.
+         * \returns 0 on success or a negative error code on failure; call
+         *          SDL_GetError() for more information.
+         *
+         * \since This function is available since SDL 3.0.0.
+         *
+         * \sa SDL_LoadBMP
+         * \sa SDL_SaveBMP_IO
+         */
+        [DllImport(nativeLibName, CallingConvention = CallingConvention.Cdecl)]
+        private static extern unsafe int SDL_SaveBMP(SDL_Surface_Ptr surface, /*const char*/ byte* file);
+
+        public static int SDL_SaveBMP(SDL_Surface_Ptr surface, ReadOnlySpan<byte> Path)
+        {
+            unsafe
+            {
+                fixed (byte* PathPtr = Path)
+                {
+                    return SDL_SaveBMP(surface, PathPtr);
+                }
+            }
+        }
         #endregion
 
         #region SDL_video

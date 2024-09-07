@@ -9,3 +9,4 @@ obj
 *.spirv
 third_party/unknown_author/*
 *.svg.*.svg
+test_pattern.bmp

@@ -103,6 +103,12 @@ public class ImageResource
         Free();
     }
 
+    public void SaveBMP(string Path)
+    {
+        byte[] PathBytes = System.Text.Encoding.UTF8.GetBytes(Path);
+        SDL_SaveBMP(Surface, PathBytes);
+    }
+
     public Vector4 Read(int X, int Y)
     {
         unsafe
