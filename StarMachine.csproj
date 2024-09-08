@@ -14,6 +14,11 @@
     <SignAssembly>False</SignAssembly>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <Optimize>False</Optimize>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
   <ItemGroup>
     <Content Include="star_machine.ico" />
   </ItemGroup>
@@ -26,7 +31,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="*.spirv" />
     <EmbeddedResource Include="star_machine.bmp" />
     <EmbeddedResource Include="third_party/*/*.ttf" />
     <EmbeddedResource Include="third_party/*/*.svg" />
@@ -34,6 +38,37 @@
     <EmbeddedResource Include="svg/*_needle.svg" />
     <EmbeddedResource Include="svg/*_shadow.svg" />
   </ItemGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <ShaderCompiler>third_party\glslang\glslangValidator.exe</ShaderCompiler>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <ShaderCompiler>glslangValidator</ShaderCompiler>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <CommonShaderArgs>--enhanced-msgs --nan-clamp -g -V -e main</CommonShaderArgs>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Shader Include="star_machine/*.glsl">
+      <Name>$([System.Text.RegularExpressions.Regex]::Match(%(Identity), '((?:\w|\.|_)+)(?=\.(?:vs|fs)\.glsl$)'))</Name>
+      <Stage>$([System.Text.RegularExpressions.Regex]::Match(%(Identity), '(vs|fs)(?=\.glsl$)'))</Stage>
+      <OutFile Condition="%(Name) != '' And %(Stage) != ''">%(Name).%(Stage).spirv</OutFile>
+      <CompileCommand Condition="%(Stage) == 'vs'">$(ShaderCompiler) $(CommonShaderArgs) -S vert -o %(OutFile) %(Identity)</CompileCommand>
+      <CompileCommand Condition="%(Stage) == 'fs'">$(ShaderCompiler) $(CommonShaderArgs) -S frag -o %(OutFile) %(Identity)</CompileCommand>
+    </Shader>
+  </ItemGroup>
+
+  <Target Name="CompileShaders" BeforeTargets="ResolveReferences"
+    Inputs="@(Shader)"
+    Outputs="%(Shader.OutFile)">
+    <Exec Command="%(Shader.CompileCommand)" />
+    <ItemGroup>
+      <EmbeddedResource Include="%(Shader.OutFile)" />
+    </ItemGroup>
+  </Target>
 
   <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <ThirdPartyDLLs Include="third_party\**\*.dll" />
