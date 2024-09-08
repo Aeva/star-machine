@@ -35,17 +35,26 @@
     <EmbeddedResource Include="svg/*_shadow.svg" />
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
     <ThirdPartyDLLs Include="third_party\**\*.dll" />
   </ItemGroup>
 
-  <!-- see https://stackoverflow.com/a/65208710 about the Condition param -->
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+  <ItemGroup Condition="$([MSBuild]::IsOSPlatform('Linux'))">
+    <ThirdPartyDLLs Include="../sdl3gpu/SDL/build/libSDL3.so" />
+    <ThirdPartyDLLs Include="../plutovg/build/libplutovg.so" />
+    <ThirdPartyDLLs Include="../plutosvg/build/libplutosvg.so" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Copy SourceFiles="@(ThirdPartyDLLs)" DestinationFolder="$(TargetDir)" />
+    <Move SourceFiles="$(TargetDir)\libplutovg.so" DestinationFiles="$(TargetDir)\plutovg-0.so" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+    <Move SourceFiles="$(TargetDir)\libplutosvg.so" DestinationFiles="$(TargetDir)\plutosvg-0.so" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
   </Target>
 
-  <Target Name="PostPublish" AfterTargets="Publish" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+  <Target Name="PostPublish" AfterTargets="Publish">
     <Copy SourceFiles="@(ThirdPartyDLLs)" DestinationFolder="$(PublishDir)" />
+    <Move SourceFiles="$(PublishDir)\libplutovg.so" DestinationFiles="$(PublishDir)\plutovg-0.so" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
+    <Move SourceFiles="$(PublishDir)\libplutosvg.so" DestinationFiles="$(PublishDir)\plutosvg-0.so" Condition="$([MSBuild]::IsOSPlatform('Linux'))" />
   </Target>
 
 </Project>
