@@ -466,7 +466,7 @@ class LowLevelRenderer
         }
 
         {
-            var VertexShader = LoadShader("draw_splat.vs.spirv", SDL_GpuShaderStage.SDL_GPU_SHADERSTAGE_VERTEX, 0, 1, 0, 0);
+            var VertexShader = LoadShader("DrawSplat.vs.spirv", SDL_GpuShaderStage.SDL_GPU_SHADERSTAGE_VERTEX, 0, 1, 0, 0);
             if (VertexShader == IntPtr.Zero)
             {
                 SDL_GpuUnclaimWindow(Device, Window);
@@ -476,7 +476,7 @@ class LowLevelRenderer
                 return true;
             }
 
-            var FragmentShader = LoadShader("draw_splat.fs.spirv", SDL_GpuShaderStage.SDL_GPU_SHADERSTAGE_FRAGMENT, 0, 0, 0, 0);
+            var FragmentShader = LoadShader("DrawSplat.fs.spirv", SDL_GpuShaderStage.SDL_GPU_SHADERSTAGE_FRAGMENT, 0, 0, 0, 0);
             if (VertexShader == IntPtr.Zero)
             {
                 SDL_GpuReleaseShader(Device, VertexShader);
