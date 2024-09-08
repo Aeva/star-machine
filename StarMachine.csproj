@@ -34,4 +34,13 @@
     <EmbeddedResource Include="svg/*_shadow.svg" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ThirdPartyDLLs Include="third_party\**\*.dll" />
+  </ItemGroup>
+
+  <!-- see https://stackoverflow.com/a/65208710 -->
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
+    <Copy SourceFiles="@(ThirdPartyDLLs)" DestinationFolder="$(TargetDir)" />
+  </Target>
+
 </Project>
