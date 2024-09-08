@@ -97,6 +97,7 @@ class LowLevelRenderer
     private IntPtr SplatWorldPositionBuffer_L = IntPtr.Zero;
     private IntPtr SplatWorldPositionBuffer_H = IntPtr.Zero;
     private IntPtr SplatColorBuffer = IntPtr.Zero;
+    private IntPtr SplatPortalBuffer = IntPtr.Zero;
 
     private bool StereoRendering = false;
     private float[] PupilOffsets = {};
@@ -190,6 +191,26 @@ class LowLevelRenderer
                 ScratchSpace[Cursor++] = Vertex.X;
                 ScratchSpace[Cursor++] = Vertex.Y;
                 ScratchSpace[Cursor++] = Vertex.Z;
+            }
+
+            UploadBytes(DestinationBuffer, (byte*)ScratchSpace, UploadSize, Cycling);
+        }
+    }
+
+    private void UploadVector4s(IntPtr DestinationBuffer, Vector4[] UploadData, bool Cycling = false)
+    {
+        uint WordCount = 4 * (uint)UploadData.Length;
+        uint UploadSize = sizeof(float) * WordCount;
+        unsafe
+        {
+            float* ScratchSpace = stackalloc float[(int)WordCount];
+            int Cursor = 0;
+            foreach (Vector4 Vertex in UploadData)
+            {
+                ScratchSpace[Cursor++] = Vertex.X;
+                ScratchSpace[Cursor++] = Vertex.Y;
+                ScratchSpace[Cursor++] = Vertex.Z;
+                ScratchSpace[Cursor++] = Vertex.W;
             }
 
             UploadBytes(DestinationBuffer, (byte*)ScratchSpace, UploadSize, Cycling);
@@ -514,7 +535,7 @@ class LowLevelRenderer
                     AttachmentInfo.depthStencilFormat = SDL.SDL_GpuTextureFormat.SDL_GPU_TEXTUREFORMAT_D32_SFLOAT;
                 }
 
-                const int VertexBindingCount = 4;
+                const int VertexBindingCount = 5;
                 SDL_GpuVertexBinding* VertexBindings = stackalloc SDL_GpuVertexBinding[VertexBindingCount];
                 {
                     // "LocalVertexOffset"
@@ -540,9 +561,15 @@ class LowLevelRenderer
                     VertexBindings[3].stride = (uint)sizeof(Vector3);
                     VertexBindings[3].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_INSTANCE;
                     VertexBindings[3].stepRate = 1;
+
+                    // "Portal"
+                    VertexBindings[4].binding = 4;
+                    VertexBindings[4].stride = (uint)sizeof(Vector4);
+                    VertexBindings[4].inputRate = SDL_GpuVertexInputRate.SDL_GPU_VERTEXINPUTRATE_INSTANCE;
+                    VertexBindings[4].stepRate = 1;
                 }
 
-                const int VertexAttributeCount = 4;
+                const int VertexAttributeCount = 5;
                 SDL_GpuVertexAttribute* VertexAttributes = stackalloc SDL_GpuVertexAttribute[VertexAttributeCount];
                 {
                     // "LocalVertexOffset"
@@ -568,6 +595,12 @@ class LowLevelRenderer
                     VertexAttributes[3].binding = 3;
                     VertexAttributes[3].format = SDL_GpuVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_VECTOR3;
                     VertexAttributes[3].offset = 0;
+
+                    // "Portal"
+                    VertexAttributes[4].location = 4;
+                    VertexAttributes[4].binding = 4;
+                    VertexAttributes[4].format = SDL_GpuVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_VECTOR4;
+                    VertexAttributes[4].offset = 0;
                 }
 
                 SDL_GpuVertexInputState VertexInputState = new();
@@ -878,6 +911,12 @@ class LowLevelRenderer
                 (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
                 sizeof(float) * 3 * (uint)Settings.MaxSurfels);
             SDL_GpuSetBufferName(Device, SplatColorBuffer, "SplatColorBuffer"u8);
+
+            SplatPortalBuffer = SDL_GpuCreateBuffer(
+                Device,
+                (uint)SDL_GpuBufferUsageFlagBits.SDL_GPU_BUFFERUSAGE_VERTEX_BIT,
+                sizeof(float) * 4 * (uint)Settings.MaxSurfels);
+            SDL_GpuSetBufferName(Device, SplatPortalBuffer, "SplatPortalBuffer"u8);
         }
 
         Console.WriteLine("Ignition successful.");
@@ -917,6 +956,7 @@ class LowLevelRenderer
 
         if (Device != IntPtr.Zero)
         {
+            MaybeReleaseBuffer(SplatPortalBuffer);
             MaybeReleaseBuffer(SplatColorBuffer);
             MaybeReleaseBuffer(SplatWorldPositionBuffer_L);
             MaybeReleaseBuffer(SplatWorldPositionBuffer_H);
@@ -941,6 +981,7 @@ class LowLevelRenderer
     {
         UploadFixies(SplatWorldPositionBuffer_L, SplatWorldPositionBuffer_H, HighRenderer.PositionUpload, true);
         UploadVector3s(SplatColorBuffer, HighRenderer.ColorUpload, true);
+        UploadVector4s(SplatPortalBuffer, HighRenderer.PortalUpload, true);
 
         IntPtr CommandBuffer = SDL_GpuAcquireCommandBuffer(Device);
         if (CommandBuffer == IntPtr.Zero)
@@ -1009,7 +1050,7 @@ class LowLevelRenderer
 
         unsafe
         {
-            Span<SDL_GpuBufferBinding> VertexBufferBindings = stackalloc SDL_GpuBufferBinding[4];
+            Span<SDL_GpuBufferBinding> VertexBufferBindings = stackalloc SDL_GpuBufferBinding[5];
 
             for (int EyeIndex = 0; EyeIndex < ColorTexture.Count(); ++EyeIndex)
             {
@@ -1052,6 +1093,8 @@ class LowLevelRenderer
                         VertexBufferBindings[2].offset = 0;
                         VertexBufferBindings[3].buffer = SplatColorBuffer;
                         VertexBufferBindings[3].offset = 0;
+                        VertexBufferBindings[4].buffer = SplatPortalBuffer;
+                        VertexBufferBindings[4].offset = 0;
                     }
 
                     SDL_GpuBufferBinding IndexBufferBinding;
@@ -1071,7 +1114,7 @@ class LowLevelRenderer
                         {
                             fixed (SDL_GpuBufferBinding* VertexBufferBindingsPtr = VertexBufferBindings)
                             {
-                                SDL_GpuBindVertexBuffers(SurfelPass, 0, VertexBufferBindingsPtr, 4);
+                                SDL_GpuBindVertexBuffers(SurfelPass, 0, VertexBufferBindingsPtr, (uint)VertexBufferBindings.Length);
                             }
                             SDL_GpuBindIndexBuffer(
                                 SurfelPass, &IndexBufferBinding, SDL_GpuIndexElementSize.SDL_GPU_INDEXELEMENTSIZE_16BIT);

@@ -15,8 +15,8 @@ using Fixie = FixedPoint.Fixie;
 
 namespace StarMachine;
 
-using SurfelList = List<(Fixie Position, Vector3 Color)>;
-using ConcurrentSurfelQueue = ConcurrentQueue<List<(Fixie Position, Vector3 Color)>>;
+using SurfelList = List<(Fixie Position, Vector3 Color, Vector4 Portal)>;
+using ConcurrentSurfelQueue = ConcurrentQueue<List<(Fixie Position, Vector3 Color, Vector4 Portal)>>;
 
 
 class HighLevelRenderer
@@ -48,6 +48,7 @@ class HighLevelRenderer
     // These are ring buffers for splat rendering.
     public Fixie[] PositionUpload = Array.Empty<Fixie>();
     public Vector3[] ColorUpload = Array.Empty<Vector3>();
+    public Vector4[] PortalUpload = Array.Empty<Vector4>();
     public uint LiveSurfels = 0;
     public uint WriteCursor = 0;
     public float SplatDiameter = 0.1f;
@@ -138,6 +139,7 @@ class HighLevelRenderer
 
         PositionUpload = new Fixie[Settings.MaxSurfels];
         ColorUpload = new Vector3[Settings.MaxSurfels];
+        PortalUpload = new Vector4[Settings.MaxSurfels];
 
         {
             var parallelOptions = new ParallelOptions();
@@ -210,10 +212,11 @@ class HighLevelRenderer
                 {
                     foreach (var Surfel in SurfelBatch)
                     {
-                        (Fixie Position, Vector3 Color) = Surfel;
+                        (Fixie Position, Vector3 Color, Vector4 Portal) = Surfel;
 
                         PositionUpload[WriteCursor] = Position;
                         ColorUpload[WriteCursor] = Color;
+                        PortalUpload[WriteCursor] = Portal;
                         WriteCursor = (WriteCursor + 1) % (uint)Settings.MaxSurfels;
                         LiveSurfels = Math.Min(LiveSurfels + 1, (uint)Settings.MaxSurfels);
                     }
@@ -391,6 +394,7 @@ class HighLevelRenderer
                 float MirrorTravel = 0.0f;
 
                 var MirrorColor = new Vector3(0.0f, 0.0f, 0.0f);
+                Vector4 SplatPortal = Vector4.Zero;
 
                 if (Start != Stop)
                 {
@@ -403,25 +407,26 @@ class HighLevelRenderer
                         float StuffDist = Stuff.Eval(Position);
                         if (FloorDist < StuffDist)
                         {
+                            var Normal = Model.Gradient(Position);
+                            SplatPortal.X = Normal.X;
+                            SplatPortal.Y = Normal.Y;
+                            SplatPortal.Z = Normal.Z;
+
+                            for (int LightIndex = 0; LightIndex < LightPoints.Length; ++LightIndex)
                             {
-                                var Normal = Model.Gradient(Position);
+                                var LightPoint = (LightPoints[LightIndex] + MovementProjection - RelativeTracingOrigin).ToVector3();
+                                var LightColor = LightColors[LightIndex];
 
-                                for (int LightIndex = 0; LightIndex < LightPoints.Length; ++LightIndex)
+                                var Offset = Normal * 0.01f + Position;
+                                float Visibility = Model.LightTrace(Normal * 0.01f + Position, LightPoint, 0.1f);
+
+                                if (Visibility > 0.0f)
                                 {
-                                    var LightPoint = (LightPoints[LightIndex] + MovementProjection - RelativeTracingOrigin).ToVector3();
-                                    var LightColor = LightColors[LightIndex];
+                                    var LightRay = Vector3.Normalize(LightPoint - Position);
 
-                                    var Offset = Normal * 0.01f + Position;
-                                    float Visibility = Model.LightTrace(Normal * 0.01f + Position, LightPoint, 0.1f);
+                                    float Luminence = Math.Max(Vector3.Dot(LightRay, Normal), 0.0f) * Visibility;
 
-                                    if (Visibility > 0.0f)
-                                    {
-                                        var LightRay = Vector3.Normalize(LightPoint - Position);
-
-                                        float Luminence = Math.Max(Vector3.Dot(LightRay, Normal), 0.0f) * Visibility;
-
-                                        MirrorColor += LightColor * Luminence;
-                                    }
+                                    MirrorColor += LightColor * Luminence;
                                 }
                             }
 
@@ -429,6 +434,8 @@ class HighLevelRenderer
                             Vector3 MirrorRay = Vector3.Reflect(RayDir, Vector3.UnitZ);
                             (Hit, MirrorTravel) = Stuff.TravelTrace(Position, MirrorRay, 10_000.0f, 0.0f);
                             Position = MirrorRay * MirrorTravel + Position;
+
+                            SplatPortal.W = -Vector3.Dot(MirrorRay * MirrorTravel, Normal);
                         }
                     }
 
@@ -468,7 +475,7 @@ class HighLevelRenderer
                             float Fnord = Single.Min(MirrorTravel / 20.0f, 0.5f);
                             SplatColor = Vector3.Lerp(SplatColor, MissColor, Fnord) * Vector3.Lerp(MirrorColor, MissColor, Fnord);
                         }
-                        NewSurfels.Add((SplatPosition, SplatColor));
+                        NewSurfels.Add((SplatPosition, SplatColor, SplatPortal));
                         continue;
                     }
                 }
@@ -477,12 +484,12 @@ class HighLevelRenderer
                     {
                         Vector3 Position = RayDir * FirstTravel + Start;
                         Fixie SplatPosition = RelativeTracingOrigin + new Fixie(Position);
-                        NewSurfels.Add((SplatPosition, MirrorColor));
+                        NewSurfels.Add((SplatPosition, MirrorColor, Vector4.Zero));
                     }
                     else
                     {
                         Fixie SplatPosition = RelativeTracingOrigin + new Fixie(Stop);
-                        NewSurfels.Add((SplatPosition, MissColor));
+                        NewSurfels.Add((SplatPosition, MissColor, Vector4.Zero));
                     }
                     continue;
                 }
