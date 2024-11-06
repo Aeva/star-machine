@@ -237,7 +237,7 @@ internal class Program
                 Console.WriteLine("Embedded resources:");
                 string[] ResourceNames = Assembly.GetExecutingAssembly().GetManifestResourceNames();
                 foreach (string ResourceName in ResourceNames)
-        {
+                {
                     Console.WriteLine($" - {ResourceName}");
                 }
                 return;
@@ -311,6 +311,8 @@ internal class Program
         {
             FixedPointTests.PreflightCheck();
             UnitsTests.PreflightCheck();
+
+            var Fnord = SurfelResource.LoadSMBH("StarMachine.terrain_test.smbh");
         }
 #endif
 

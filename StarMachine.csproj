@@ -37,6 +37,7 @@
     <EmbeddedResource Include="svg/*_dial.svg" />
     <EmbeddedResource Include="svg/*_needle.svg" />
     <EmbeddedResource Include="svg/*_shadow.svg" />
+    <EmbeddedResource Include="*.smbh" />
   </ItemGroup>
 
   <PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
